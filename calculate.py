@@ -1785,20 +1785,21 @@ class calculate():
         if Nosc > self.maxOscillators:
             Nosc=self.maxOscillators
        
-        step=self.Stepsize
+        step = self.Stepsize
         CenterFirstBin = self.LowerELimit + 0.5*step # first energy point of plot
         CenterLastBin  = self.UpperELimit - 0.5*step # last energy point assuming constant stepsiize
 
         linearLastE=self.LowerELimit+Nosc*step 
-        linearXaxis= np.linspace(CenterFirstBin,CenterLastBin+(Nosc-1)*step, Nosc) 
-        missing_bit=self.UpperELimit - (self.LowerELimit+Nosc*step )
+        linearXaxis= np.linspace(CenterFirstBin, linearLastE, Nosc) 
+        missing_bit=self.UpperELimit - linearLastE
         print("missing bit",missing_bit)
-        logXaxis=np.geomspace( step/20,missing_bit ,Nosc)
+        logXaxis=np.geomspace( step/5,missing_bit ,Nosc)
         last_step=logXaxis[Nosc-1]-logXaxis[Nosc-2]
         logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,Nosc)
         x_axis=linearXaxis+logXaxis
         xstepsize=np.gradient(x_axis)
-        print(x_axis)
+        print("linearXaxis",linearXaxis)
+        print("logXaxis",logXaxis)
         omega=x_axis[0]
         currentBin=0
         for i in range(self.N_oscillator_used):
@@ -1812,7 +1813,7 @@ class calculate():
             Amp = g_omega_prefactor *currentELF * xstepsize[i]
             self.Omegas[i]=omega
             self.Amps[i]=Amp
-            self.Gammas[i]=1.3*xstepsize[i]
+            self.Gammas[i]=1.15*xstepsize[i]
             self.Alphas[i]=1.0
             self.Us[i]=0
        # #=========
