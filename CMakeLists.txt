@@ -20,4 +20,5 @@ execute_process(
 find_package(nanobind CONFIG REQUIRED)
 nanobind_add_module(epslib epslib.cpp Faddeeva.cc )
 
+target_link_libraries(epslib PRIVATE quadmath)
 

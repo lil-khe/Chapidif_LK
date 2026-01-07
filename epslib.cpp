@@ -14,13 +14,14 @@
 #include <nanobind/nanobind.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/complex.h> // Enables complex number support
-//#ifdef _WIN32
-    //#include <quadmath.h>
-    //#define QUADMATH =1
-//#elif __linux__
-    //#include <quadmath.h>
-    //#define QUADMATH =1
-//#endif  // so no quadmath for MAC
+
+#ifdef _WIN32
+    #include <quadmath.h>
+    #define QUADMATH =1
+#elif __linux__
+    #include <quadmath.h>
+    #define QUADMATH =1
+#endif  // so no quadmath for MAC
 
 
 
@@ -48,7 +49,7 @@ const double pi = 3.141592653589793238463;
 const double Hartree = 27.211;
 const double BohrRadius  = 0.529177;
 const double C = 137.036;
-bool MacOs;
+
 double Projectile_Mass;
 bool proton;  // true = proton else electron
 bool MottCorrection;
@@ -81,7 +82,7 @@ double E_0,p_0,p_detected,v_0, Egerton_rel_cor_factor, gamma_rel, beta_r, b_zero
 
 double rest_mass_energy;
 bool add_Dopplerwidth_to_classical_DF=false;
-double Tauc_width_Fudge=1.0;
+
 
 bool Apply_Mermin_Correction,DirectMethod,  ApplySumRuleToGOS, OriginalKaneko, AddELF; 
 bool modelDrude, modelDL, modelMerminLL,modelVlasov, modelTaucLorentz, modelTL_an, modelForouhiBloomer, modelBrendelBormann;
@@ -633,7 +634,7 @@ dcomp  Chi_Lindhard(double q, dcomp omega_c, double  omega0)
     z =  sqrt2Q/(2*v_f);
     u =  omega_c/ (sqrt2Q *v_f);
    
-    if ((abs(u) < 500.0*z) or MacOs) // the transition momentum  may need some fine tuning,  MacOs has no quad math.
+    if (abs(u) < 500.0*z) // the transition momentum  may need some fine tuning,  MacOs has no quad math.
     {
        sumdterms=sumg(z,u);
     }
@@ -1057,7 +1058,7 @@ double TaucNormalisation(double A,double  C, double E0, double E0_thisq,  double
     {
         double k_f=pow( E0* E0*3.0/4.0*pi,1.0/3.0);
        
-        C=sqrt(C*C+ Tauc_width_Fudge*0.25*q*k_f*q*k_f);
+        C=sqrt(C*C+ 0.25*q*k_f*q*k_f);
     }    
     for ( i=0; i < nstep/2; i++)
     {
@@ -1177,7 +1178,7 @@ dcomp Chi_TL(double q,double current_w, int i) // also used for TL_an_Sum give l
     {   double a=wi[i];
         if (a< 17/Hartree) a=17/Hartree;  // make it at least the plasmon energy
         double k_f=pow(a* a*3.0/4.0*pi,1.0/3.0); 
-        Gamma_this_q=sqrt(gammai[i]*gammai[i]+ Tauc_width_Fudge*0.25*q*k_f*q*k_f);  //there is a factor of 0.25 herethat I can not justify
+        Gamma_this_q=sqrt(gammai[i]*gammai[i]+ 0.25*q*k_f*q*k_f);  //there is a factor of 0.25 herethat I can not justify
     }  
     else
     {
@@ -1703,14 +1704,6 @@ double DSEPfun(double q)
 
 int  copyP_to_Vars(double *p,  int modelchoice)
 {
-     MacOs=true;   
-    #ifdef _WIN32
-        MacOs=false;
-    #endif
-    #ifdef  __linux__ 
-        MacOs=false;
-    #endif
-    if (Tauc_width_Fudge !=1.0) printf("Tauc fudge width of %6.4f used\n",Tauc_width_Fudge);
     double precision;
     int Param_Offset;
     modelDrude = false; modelDL = false; modelMerminLL = false;  modelVlasov = false;
@@ -2477,7 +2470,71 @@ double DDCS_incl_retardation(double omega, double theta)
         }
         return 0;
     }
-    
+ int  DIIMFP_variable_step(npArray ParameterArray, const npArray npomega_values,const npArray npstep_values, npArray npDIIMFPArray, int modelchoice, npArray npResultArray)
+    {
+       //diimfp calculated for all energy losses with first fixed (for DIIMFP distribution) and then  variable stepsize, (for stopping straggling and IMFP calculation).
+       double *DIIMFPresult= npDIIMFPArray.data();
+       double *omega_values= npomega_values.data();// should be in Hartrees
+       double *step_values= npstep_values.data();// should be in Hartrees
+       double *ResultArray=  npResultArray.data();
+       double inv_lambda=1E-99;  // so we never get divide by 0
+       double stopping=0.0;
+       double straggling=0.0;
+       double last_step, next_step;
+       size_t omega_size = npomega_values.shape(0);
+      
+       copyP_to_Vars(ParameterArray.data(), modelchoice);
+      
+     //  double Effective_Stepsize = omega_values[1] - omega_values[0];
+       double DIIMFP_au;
+       double omega_max= 2*beta_r*beta_r*gamma_rel*gamma_rel*C*C;
+       double MottFactor=1.0;
+       bool KeepGoing=true;
+       int i=0;
+       double step=step_values[0];
+       double omega=omega_values[0];
+       while (KeepGoing)
+       {    
+            DIIMFP_au= DIIMFP_at_omega(omega);
+           
+            if(MottCorrection)
+            {  
+                if (omega < omega_max) MottFactor= (1- beta_r*beta_r*omega/omega_max);// keep Mott factor the same for omega > omega_max
+                DIIMFP_au *= MottFactor; // correction factor Salvat PRA  106 032809 eq.16 
+               
+            }
+
+            inv_lambda     += DIIMFP_au * step;
+            stopping       += DIIMFP_au * step * omega;
+            straggling     += DIIMFP_au * step * omega * omega;
+            if(i < omega_size)  DIIMFPresult[i] = DIIMFP_au/ (Hartree*BohrRadius);
+            i++;
+            if(i<  omega_size)
+            {  
+                step =step_values[i];;  //average of previous and this stepsize
+                omega=omega_values[i];
+                last_step=step;
+            }
+            else
+            { 
+                 next_step = 1.1*last_step;
+                 step = (next_step+last_step)/2.0;
+                 omega += next_step;
+                 last_step=next_step;
+            }
+
+            if((ExchangeCorrection  != 0) && (omega > 0.5*(E_0+BE_for_exchange))) KeepGoing=false; 
+            if(omega > 1.5* omega_max+2.0) KeepGoing=false; 
+        }
+        ResultArray[0]=(1.0/(inv_lambda+1.0e-99))*BohrRadius;  //IMFP now in Angstrom;
+        ResultArray[1]=Hartree* (stopping)/BohrRadius;  //stopping now in eV/Angstrom
+        ResultArray[2]= Hartree*Hartree* (straggling)/BohrRadius;  //straggling  now in eV^2/Angstrom
+        if(DebugMode)
+        {
+            if (errno !=0) my_perror("DIIMFP_for_stopping at end: an error occured");
+        }
+        return 0;
+    }    
     
 	double  DSEP(npArray ParameterArray, npArray np_DSEPresult,  int modelchoice)
 	{
@@ -3060,5 +3117,6 @@ NB_MODULE(epslib, m) {
     m.def("TaucMermin_SumRule", &TaucMermin_SumRule, "calculate sum rule for Tauc-truncated mermin DF");
     m.def("TL_an_SumRule", &TL_an_SumRule, "calculate sum rule for Tauc_analytic DF"); 
     m.def("TaucSumRule", &TaucSumRule, "calculate sum rule for Tauc DF");
-    m.def("cumulative_trapezoid",cumulative_trapezoid,"modifiied cumulative trapezoid integration");
+    m.def("DIIMFP_variable_step",&DIIMFP_variable_step,"calculate DIIMFP with, if required, variable step size");
+   // m.def("cumulative_trapezoid",cumulative_trapezoid,"modifiied cumulative trapezoid integration");
 }

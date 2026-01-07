@@ -249,7 +249,8 @@ class run_and_plot:
         self.plot_result2() 
         
     def eps_w_kk(self):   
-        self.calc.eps_kk_test()
+        error=self.calc.eps_kk_test()
+        if error != 0: return
         self.xlabel = "ω (eV)"
         self.LaTex_label1 = r"$\mathrm{Re} \left[\epsilon (ω, q= %s)\right]$" %str(self.calc.q)
         self.LaTex_label2 = r"$\mathrm{Im} \left[\epsilon (ω, q= %s)\right]$" %str(self.calc.q)
@@ -263,7 +264,8 @@ class run_and_plot:
         self.plot_result4()   
         
     def one_over_eps_w_kk(self):   
-        self.calc.one_over_eps_kk_test()
+        error=self.calc.one_over_eps_kk_test()
+        if error != 0: return
         self.xlabel = "ω (eV)"
         self.LaTex_label1 =r"$\mathrm{Re} \left[\frac{1}{\epsilon (ω, q= %s)}\right]$" %str(self.calc.q)
         self.LaTex_label2 = r"$\mathrm{Im}\left[\frac{-1}{\epsilon (ω, q= %s)}\right]$" %str(self.calc.q)
@@ -288,7 +290,8 @@ class run_and_plot:
         self.colorplot_result()      
         
     def n_k_kk(self):   
-        self.calc.n_and_k_kk_test()
+        error=self.calc.n_and_k_kk_test()
+        if error != 0: return
         self.xlabel = "ω (eV)"
         self.LaTex_label1 = r"$n(ω,q=%s)$"%str(self.calc.q)
         self.LaTex_label2 =  r"$k(ω,q=%s)$"%str(self.calc.q)

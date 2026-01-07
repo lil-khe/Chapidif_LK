@@ -268,10 +268,10 @@ class calculate():
         self.CenterLastBin = self.UpperELimit - 0.5*self.Stepsize # last energy point
         self.NPoints = int((self.UpperELimit - self.CenterFirstBin) / self.Stepsize) + 1
         if self.NPoints >self.MaxNPoints:
-            self.LogScale=True
+            self.stepEfixed=False
             self.NPoints = self.MaxNPoints
         else:
-            self.LogScale= False    
+            self.stepEfixed= True    
         self.Nqstep = int(self.UpperqLimit / self.Stepsize_qplot)
       
         # max_q_considered: the maximum momentum that is used in the integration in terms of q_min
@@ -371,30 +371,29 @@ class calculate():
         
     # ====================================================
     def calculate_energy_axis(self,FineMeshFactor):
-        step_fine=self.Stepsize/FineMeshFactor
-        Npnts=self.NPoints*FineMeshFactor
-        print("Npnts",Npnts)
-        CenterFirstBin = self.LowerELimit + 0.5*step_fine # first energy point of plot
-        CenterLastBin  = self.UpperELimit - 0.5*step_fine # last energy point assuming constant stepsiize
-        if not  self.LogScale:
-            self.x_axis= np.linspace(CenterFirstBin,CenterLastBin, Npnts)  
+        step=self.Stepsize/FineMeshFactor
+        NStep=self.NPoints*FineMeshFactor
+        CenterFirstBin=self.LowerELimit + 0.5*step
+        CenterLastBin=self.UpperELimit - 0.5*step
+        if self.stepEfixed:
+            self.x_axis= np.linspace(CenterFirstBin,CenterLastBin, NStep)  
             
         else:
-            linearLastE=self.LowerELimit+Npnts*step_fine 
-            linearXaxis= np.linspace(CenterFirstBin,CenterFirstBin+(Npnts-1)*step_fine, Npnts) 
-            missing_bit=self.UpperELimit - (self.LowerELimit+Npnts*step_fine )
-            logXaxis=np.geomspace( step_fine/20,missing_bit ,Npnts)
-            last_step=logXaxis[Npnts-1]-logXaxis[Npnts-2]
-            logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,Npnts)
+            linearLastE=self.LowerELimit+NStep*step
+            linearXaxis= np.linspace(CenterFirstBin,linearLastE-0.5*step, NStep) 
+            missing_bit=self.UpperELimit - linearLastE
+            logXaxis=np.geomspace( step/20,missing_bit ,NStep)
+            last_step=logXaxis[self.MaxNPoints-1]-logXaxis[self.MaxNPoints-2]
+            logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,NStep)
             self.x_axis=linearXaxis+logXaxis
         self.xstepsize=np.gradient(self.x_axis)
-        print(self.xstepsize)    
-        print("sum",self.xstepsize.sum()) 
-        print("length",self.xstepsize.size)     
-        
+        print("x axis", self.x_axis)
+    # ====================================================    
     
-    def calculate_eps_array(self,FineMeshFactor):
-        eps = np.zeros(self.NPoints*FineMeshFactor,dtype=np.complex128)
+    def calculate_eps_array(self):
+        NPnts=np.size(self.x_axis)
+        print(NPnts,"number points")
+        eps = np.zeros(NPnts,dtype=np.complex128)
         epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
         epslib.Eps1Eps2(self.ParArray,self.x_axis, eps, self.q, self.DFChoice)
         return eps
@@ -402,20 +401,15 @@ class calculate():
     def eps1eps2(self):
         FineMeshFactor=1
         self.calculate_energy_axis(FineMeshFactor)
-        eps =self.calculate_eps_array(FineMeshFactor)
+        eps =self.calculate_eps_array()
         self.Result1=np.real(eps)
         self.Result2=np.imag(eps)
-            
-    # def eps1eps2_fine(self):  # this one is for sum rules and KK, to make sure there are no significant numerical errors
-        # self.CenterFirstBin = self.LowerELimit + 0.5*self.Stepsize/self.FineMeshFactor # first energy point of plot
-        # self.CenterLastBin = self.UpperELimit - 0.5*self.Stepsize/self.FineMeshFactor # last energy point
-        # self.eps_fine=calculate_eps_array(self.NPoints*self.FineMeshFactor):   
-                
 
     def oneovereps1eps2(self):
         FineMeshFactor=1
         self.calculate_energy_axis(FineMeshFactor)
-        eps =self.calculate_eps_array(FineMeshFactor)
+        print("x-axis",self.x_axis)
+        eps =self.calculate_eps_array()
         self.Result1=np.real(1.0/eps)
         self.Result2=-np.imag(1.0/eps)  # so the loss function not 1/eps2
         
@@ -440,13 +434,15 @@ class calculate():
     # ========================
     
     def eps_kk_test(self):
+        if not self.stepEfixed:
+            print("ERROR,KK tests requires fixed stepsize")
+            self.MyChapApp.UpdateStatus("ERROR,KK tests requires fixed stepsize")
+            return -1
+            
         FineMeshFactor=9
-        stepsize_fine = self.Stepsize/FineMeshFactor
-        length_fine = self.NPoints*FineMeshFactor
-        CenterFirstBin_fine = self.LowerELimit + 0.5*stepsize_fine # first energy point of plot local!
-        CenterLastBin_fine = self.UpperELimit - 0.5*stepsize_fine # last energy point
-        
-        eps_fine=self.calculate_eps_array(self.NPoints*FineMeshFactor,CenterFirstBin_fine,CenterLastBin_fine) 
+        length_fine=self.NPoints*FineMeshFactor
+        self.calculate_energy_axis(FineMeshFactor)
+        eps_fine=self.calculate_eps_array() 
         self.Result1_fine = eps_fine.real
         self.Result2_fine = eps_fine.imag
  
@@ -454,14 +450,15 @@ class calculate():
         self.Result4_fine = np.zeros(length_fine)
         eps_last=eps_fine[length_fine-1]
        
-        epslib.Kramers_Kronig_eps1_from_eps2(CenterFirstBin_fine, stepsize_fine, eps_last,length_fine,
+        epslib.Kramers_Kronig_eps1_from_eps2(self.x_axis[0], self.xstepsize[0], eps_last,length_fine,
              self.Result2_fine , self.Result3_fine)
 
-        epslib.Kramers_Kronig_eps2_from_eps1(CenterFirstBin_fine, stepsize_fine, eps_last,length_fine,
+        epslib.Kramers_Kronig_eps2_from_eps1(self.x_axis[0], self.xstepsize[0], eps_last,length_fine,
              self.Result1_fine , self.Result4_fine)
 
         #now cast the result on the normal grid we use for plotting  
         self.recast(FineMeshFactor, only_2=False)
+        return 0
         
 
         
@@ -542,43 +539,49 @@ class calculate():
                 
     
     def one_over_eps_kk_test(self):
+        if not self.stepEfixed:
+            print("ERROR,KK tests requires fixed stepsize")
+            self.MyChapApp.UpdateStatus("ERROR,KK tests requires fixed stepsize")
+            return -1
         FineMeshFactor=9
-        stepsize_fine = self.Stepsize/FineMeshFactor
-        length_fine = self.NPoints*FineMeshFactor
-        CenterFirstBin_fine = self.LowerELimit + 0.5*stepsize_fine # first energy point of plot local!
-        CenterLastBin_fine = self.UpperELimit - 0.5*stepsize_fine # last energy point
-        
-        eps_fine=self.calculate_eps_array(self.NPoints*FineMeshFactor,CenterFirstBin_fine,CenterLastBin_fine) 
+        length_fine=self.NPoints*FineMeshFactor
+
+        self.calculate_energy_axis(FineMeshFactor)
+        eps_fine=self.calculate_eps_array() 
         self.Result1_fine =  np.real(1.0/eps_fine)
         self.Result2_fine =  np.imag(1.0/eps_fine)
         self.Result3_fine = np.zeros(length_fine)
         self.Result4_fine = np.zeros(length_fine)
 
         one_over_eps_last=1.0/eps_fine[length_fine-1]
-        epslib.Kramers_Kronig_eps1_from_eps2(CenterFirstBin_fine, stepsize_fine, one_over_eps_last,
+        epslib.Kramers_Kronig_eps1_from_eps2(self.x_axis[0], self.xstepsize[0], one_over_eps_last,
             length_fine, self.Result2_fine, self.Result3_fine)
-        epslib.Kramers_Kronig_eps2_from_eps1(CenterFirstBin_fine,stepsize_fine, one_over_eps_last,
+        epslib.Kramers_Kronig_eps2_from_eps1(self.x_axis[0], self.xstepsize[0], one_over_eps_last,
             length_fine, self.Result1_fine , self.Result4_fine)    
        
         self.Result4_fine  *= -1 # now result4 contains im (-1/eps) (obtained via KK)   
         self.Result2_fine  *= -1 # now result2 contains im (-1/eps) (original)                          
-        self.recast(FineMeshFactor, only_2=False)      
+        self.recast(FineMeshFactor, only_2=False)  
+        return 0    
 
     def n_and_k_from_eps1_eps2(self):
         # check this! not sure what it means for q!=0
         #see also Wooton eq. 3.25,3.26
-        eps=self.calculate_eps_array(self.NPoints,self.CenterFirstBin,self.CenterLastBin)
+
+        self.calculate_energy_axis(1)
+        eps=self.calculate_eps_array() 
         self.Result1= np.real(eps**0.5)
         self.Result2= np.imag(eps**0.5)
             
     def n_and_k_kk_test(self):
-   
+        if not self.stepEfixed:
+            print("ERROR,KK tests requires fixed stepsize")
+            self.MyChapApp.UpdateStatus("ERROR,KK tests requires fixed stepsize")
+            return -1
         FineMeshFactor=9
-        stepsize_fine = self.Stepsize/FineMeshFactor
-        length_fine = self.NPoints*FineMeshFactor
-        CenterFirstBin_fine = self.LowerELimit + 0.5*stepsize_fine # first energy point of plot local!
-        CenterLastBin_fine = self.UpperELimit - 0.5*stepsize_fine # last energy point
-        eps_fine=self.calculate_eps_array(self.NPoints*FineMeshFactor,CenterFirstBin_fine,CenterLastBin_fine) 
+        length_fine=self.NPoints*FineMeshFactor
+        self.calculate_energy_axis(FineMeshFactor)
+        eps_fine=self.calculate_eps_array() 
         n_complex=np.sqrt(eps_fine)
         self.Result1_fine= np.real(n_complex)  # contains n
         self.Result2_fine= np.imag(n_complex)   # contains k
@@ -586,25 +589,27 @@ class calculate():
         self.Result4_fine = np.zeros(length_fine)
         n_last= n_complex[length_fine-1]
 
-        epslib.Kramers_Kronig_eps1_from_eps2(CenterFirstBin_fine,stepsize_fine,n_last,length_fine,
+        epslib.Kramers_Kronig_eps1_from_eps2(self.x_axis[0], self.xstepsize[0],n_last,length_fine,
             self.Result2_fine, self.Result3_fine)
-        epslib.Kramers_Kronig_eps2_from_eps1(CenterFirstBin_fine,stepsize_fine,n_last,length_fine,
+        epslib.Kramers_Kronig_eps2_from_eps1(self.x_axis[0], self.xstepsize[0],n_last,length_fine,
             self.Result1_fine, self.Result4_fine)      # result4:  kktransform from n, should be k
-        self.recast(FineMeshFactor,only_2=False)  
+        self.recast(FineMeshFactor,only_2=False) 
+        return 0 
       
     # ========================
 
     def calcDIIMFP(self):
         # calculate over the energy range defined in chapidif       
         self.Result1 = np.zeros(self.NPoints)
-        self.x_axis= np.linspace( self.CenterFirstBin,self.CenterLastBin, self.NPoints)  
+        self.calculate_energy_axis(1)
         epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
-        epslib.DIIMFP(self.ParArray,self.Result1,self.DFChoice,self.StoppingResultArray)
+       # epslib.DIIMFP(self.ParArray,self.Result1,self.DFChoice,self.StoppingResultArray)
+        epslib.DIIMFP_variable_step(self.ParArray,self.x_axis/cnst.HARTREE,self.xstepsize/cnst.HARTREE, self.Result1,self.DFChoice, self.StoppingResultArray)
 
     def sum_rules(self):
         FineMeshFactor=9
         self.calculate_energy_axis(FineMeshFactor)
-        eps_fine =self.calculate_eps_array(FineMeshFactor)
+        eps_fine =self.calculate_eps_array()
     
         length_fine = self.NPoints*FineMeshFactor
         self.Result1_fine = np.zeros(length_fine)
@@ -631,7 +636,7 @@ class calculate():
     def inertial_rules(self):  # needs some moce checking!
         FineMeshFactor=29
         self.calculate_energy_axis(FineMeshFactor)
-        eps_fine =self.calculate_eps_array(FineMeshFactor)
+        eps_fine =self.calculate_eps_array()
         
         length_fine = self.NPoints*FineMeshFactor
         self.Result1_fine = np.zeros(length_fine)
@@ -672,7 +677,7 @@ class calculate():
         FineMeshFactor=1
         last=self.NPoints - 1
         self.calculate_energy_axis(FineMeshFactor)
-        eps =self.calculate_eps_array(FineMeshFactor)
+        eps =self.calculate_eps_array()
         self.q = oldq
         elf=np.imag(-1/eps)
        
@@ -750,7 +755,6 @@ class calculate():
 
         if smallqonly:
             self.ParArray[self.NDFPAR + 11] = math.sqrt(2.0 * I1_au)
-        print("before loop")
         for Ecounter in range(self.NStopping):
             text="calculating step: {} Energy (keV):{:.2e}".format(Ecounter, CurrentE)
             self.MyChapApp.UpdateStatus(text)
@@ -1752,11 +1756,12 @@ class calculate():
             
     def dyn_struct_factor(self):
         FineMeshFactor=9
-        stepsize_fine = self.Stepsize/FineMeshFactor
+        # stepsize_fine = self.Stepsize/FineMeshFactor
         length_fine = self.NPoints*FineMeshFactor
-        CenterFirstBin_fine = self.LowerELimit + 0.5*stepsize_fine # first energy point of plot local!
-        CenterLastBin_fine = self.UpperELimit - 0.5*stepsize_fine # last energy point
-        eps_fine=self.calculate_eps_array(self.NPoints*FineMeshFactor,CenterFirstBin_fine,CenterLastBin_fine) 
+        # CenterFirstBin_fine = self.LowerELimit + 0.5*stepsize_fine # first energy point of plot local!
+        # CenterLastBin_fine = self.UpperELimit - 0.5*stepsize_fine # last energy point
+        self.calculate_energy_axis(FineMeshFactor)
+        eps_fine=self.calculate_eps_array() 
         one_over_eps=1.0/eps_fine
         
        # self.Result1_fine = np.real(one_over_eps)
@@ -1765,55 +1770,125 @@ class calculate():
         elecdens = self.Nelec_per_UC *self.UnitCellDensity * cnst.BOHR**3  # elec/per a.u.^3
         omega_p_square=4.0 * cnst.PI * elecdens #Hartree square
         self.Result1_fine *= self.q**2 / ( cnst.PI* omega_p_square) /cnst.HARTREE
-        # for i in range(self.length_fine):
-            # self.Result1_fine[i] =  self.q**2 / ( cnst.PI* omega_p_square)  * self.Result2_fine[i]
-            # self.Result1_fine[i] = self.Result1_fine[i] /cnst.HARTREE
-        sum_so_far=0.0
-        for i in range(length_fine):
-            currentE = CenterFirstBin_fine+i*stepsize_fine
-            sum_so_far +=  self.Result1_fine[i] * currentE * stepsize_fine
-            self.Result2_fine[i]= sum_so_far
+        self.Result2_fine = np.cumsum(self.Result1_fine*self.x_axis*self.xstepsize)
+    #    sum_so_far=0.0
+        # for i in range(length_fine):
+            # currentE = CenterFirstBin_fine+i*stepsize_fine
+            # sum_so_far +=  self.Result1_fine[i] * currentE * stepsize_fine
+            # self.Result2_fine[i]= sum_so_far
         self.recast( FineMeshFactor,only_2=True)    
       
     
     def DL_from_OOS(self):
         self.ZeroDF()
-        if self.N_oscillator_used > self.maxOscillators:
-            self.N_oscillator_used.set(self.maxOscillators)
-        self.PlasmonE= ( np.sqrt(4.0 * cnst.PI * self.UnitCellDensity * cnst.BOHR**3)
-                * cnst.HARTREE )  # make sure we have the current one, w_p for one e- per u.c.
+        Nosc=self.N_oscillator_used
+        if Nosc > self.maxOscillators:
+            Nosc=self.maxOscillators
        
-        omega= self.CenterFirstBin
-        rangefactor=(self.UpperELimit)/omega
-        exponent=1.0/self.N_oscillator_used
-        incrementfactor=rangefactor**exponent
-    
-        CurrentStepsize=omega*(incrementfactor-1)
+        step=self.Stepsize
+        CenterFirstBin = self.LowerELimit + 0.5*step # first energy point of plot
+        CenterLastBin  = self.UpperELimit - 0.5*step # last energy point assuming constant stepsiize
+
+        linearLastE=self.LowerELimit+Nosc*step 
+        linearXaxis= np.linspace(CenterFirstBin,CenterLastBin+(Nosc-1)*step, Nosc) 
+        missing_bit=self.UpperELimit - (self.LowerELimit+Nosc*step )
+        print("missing bit",missing_bit)
+        logXaxis=np.geomspace( step/20,missing_bit ,Nosc)
+        last_step=logXaxis[Nosc-1]-logXaxis[Nosc-2]
+        logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,Nosc)
+        x_axis=linearXaxis+logXaxis
+        xstepsize=np.gradient(x_axis)
+        print(x_axis)
+        omega=x_axis[0]
         currentBin=0
         for i in range(self.N_oscillator_used):
+            omega = x_axis[i]
             while omega >  self.OOSEnergy[currentBin]:
                 currentBin +=1
-            PosWithinBin =  (omega - self.OOSEnergy[currentBin-1])/ (self.OOSEnergy[currentBin] - self.OOSEnergy[currentBin-1])
+            PosWithinBin =  (omega - self.OOSEnergy[currentBin-1])/ (self.OOSEnergy[currentBin] - self.OOSEnergy[currentBin-1]) 
             currentOOS = self.OOS[currentBin-1] + PosWithinBin*(self.OOS[currentBin]-self.OOS[currentBin-1])
-        
-           
-            currentELF=currentOOS/(2.0*omega)*cnst.PI *  self.PlasmonE**2
+            currentELF=currentOOS/(2.0*omega)*cnst.PI *  self.PlasmonE**2   
             g_omega_prefactor = 2.0 / (cnst.PI * omega) 
-            Amp = g_omega_prefactor *currentELF * CurrentStepsize
-            CurrentStepsize *= incrementfactor    
-            # self.Omegas[i].set(f"{omega:.4g}")
-            # self.Amps[i].set(f"{Amp:.5g}")
-            # self.Gammas[i].set(f"{1.3*CurrentStepsize:.4g}") 
-            # self.Alphas[i].set("1.0")
-            # self.Us[i].set("0.0")
+            Amp = g_omega_prefactor *currentELF * xstepsize[i]
             self.Omegas[i]=omega
             self.Amps[i]=Amp
-            self.Gammas[i]=1.3*CurrentStepsize 
+            self.Gammas[i]=1.3*xstepsize[i]
             self.Alphas[i]=1.0
             self.Us[i]=0
-            omega=omega + CurrentStepsize 
-            if omega > self.OOSEnergy[self.N_OOS - 1]:
-                    return
+       # #=========
+       # linearLastE=self.LowerELimit+Npnts*step_fine 
+            # linearXaxis= np.linspace(CenterFirstBin,CenterFirstBin+(Npnts-1)*step_fine, Npnts) 
+            # missing_bit=self.UpperELimit - (self.LowerELimit+Npnts*step_fine )
+            # logXaxis=np.geomspace( step_fine/20,missing_bit ,Npnts)
+            # last_step=logXaxis[Npnts-1]-logXaxis[Npnts-2]
+            # logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,Npnts)
+            # self.x_axis=linearXaxis+logXaxis
+       #===========
+        
+        # # # Icomp=0
+        # # # OOSstepsize=np.gradient(self.OOSEnergy)
+        # # # for i in range(self.calc.N_OOS):
+                # # # if(self.OOSEnergy[i] > self.LowerELimit:
+                    # # # Lower_i=i
+                    # # # print("lower i",Lower_i)
+                    # # # break
+        # # # for i in range(lower_i, self.N_oscillator_used):
+            # # # for i in range(self.calc.N_OOS):
+                # # # if(OOSEnergy[i] > x_axis[i]+xstepsize):
+                    # # # Upper_i = i
+                    # # # print("upper i", Upper_i)
+                    # # # break
+                # # # self.Omegas[Icomp]= x_axis[i]
+                # # # OOS_interval=np.sum(Lower_i,Upper_i)# what happens aif lower_i=upper_i?
+                # # # g_omega_prefactor = 2.0 / (cnst.PI * x_axis[Icomp) 
+                # # # Amp = g_omega_prefactor *currentELF * OOSstepsize[i]
+                # # # self.Amps[Icomp]=Amp
+                # # # self.Gammas[Icomp]=1.3*xstepsize[i]
+                # # # self.Alphas[Icomp]=1.0
+                # # # self.Us[Icomp]=0
+                
+                
+                
+            
+    # def DL_from_OOS(self):
+        # self.ZeroDF()
+        # if self.N_oscillator_used > self.maxOscillators:
+            # self.N_oscillator_used.set(self.maxOscillators)
+        # self.PlasmonE= ( np.sqrt(4.0 * cnst.PI * self.UnitCellDensity * cnst.BOHR**3)
+                # * cnst.HARTREE )  # make sure we have the current one, w_p for one e- per u.c.
+       
+        # omega= self.CenterFirstBin
+        # rangefactor=(self.UpperELimit)/omega
+        # exponent=1.0/self.N_oscillator_used
+        # incrementfactor=rangefactor**exponent
+    
+        # CurrentStepsize=omega*(incrementfactor-1)
+        # currentBin=0
+        # for i in range(self.N_oscillator_used):
+            # while omega >  self.OOSEnergy[currentBin]:
+                # currentBin +=1
+            # PosWithinBin =  (omega - self.OOSEnergy[currentBin-1])/ (self.OOSEnergy[currentBin] - self.OOSEnergy[currentBin-1])
+            # currentOOS = self.OOS[currentBin-1] + PosWithinBin*(self.OOS[currentBin]-self.OOS[currentBin-1])
+        
+           
+            # currentELF=currentOOS/(2.0*omega)*cnst.PI *  self.PlasmonE**2
+            # g_omega_prefactor = 2.0 / (cnst.PI * omega) 
+            # Amp = g_omega_prefactor *currentELF * CurrentStepsize
+            # CurrentStepsize *= incrementfactor    
+            # # self.Omegas[i].set(f"{omega:.4g}")
+            # # self.Amps[i].set(f"{Amp:.5g}")
+            # # self.Gammas[i].set(f"{1.3*CurrentStepsize:.4g}") 
+            # # self.Alphas[i].set("1.0")
+            # # self.Us[i].set("0.0")
+            # self.Omegas[i]=omega
+            # self.Amps[i]=Amp
+            # self.Gammas[i]=1.3*CurrentStepsize 
+            # self.Alphas[i]=1.0
+            # self.Us[i]=0
+            # omega=omega + CurrentStepsize 
+            # if omega > self.OOSEnergy[self.N_OOS - 1]:
+                    # return
+
 
         
              
@@ -1978,132 +2053,132 @@ class calculate():
 
             self.stop_array[i] = self.StoppingResultArray[1]
 
-    def impact_dep_stop(self): #currently not connected to user interface, newver called
-        """impact dependent stopping, to be called straight after  ConvertToRadialPseudoChargeDensity()
-        atom in cube with volume Muffin_Tin sphere, i.e. unit cell volume.  It is assumed that the atoms
-        are in a simple cubic lattice with nearest neighbor distance Cube_length
-        Maximum impact parameter considered is Cube_length/2. Particle impinges perpendicular to cube
-        The energy loss for crossing the cube is calculated as a function of the impact parameter.
-        Part of the cube is outside the Muffin Tin sphere.  For that part the electron density at
-        the edge of the MT shpere is taken.
-        This edge density again is determined by the lowest energy considered for the ELF. Take this not too low"""
-        # calculate charge density distribution (Penn's pseudo charge density")
-        self.PseudoChargeDensity()
-        # put it in a radial form
-        self.ConvertToRadialPseudoChargeDensity()
-        # calculate sthe local stopping for that density (this takes time)
-        self.stopping_versus_r()
-        # calculate inpact parameter dependent stopping
+    # def impact_dep_stop(self): #currently not connected to user interface, newver called
+        # """impact dependent stopping, to be called straight after  ConvertToRadialPseudoChargeDensity()
+        # atom in cube with volume Muffin_Tin sphere, i.e. unit cell volume.  It is assumed that the atoms
+        # are in a simple cubic lattice with nearest neighbor distance Cube_length
+        # Maximum impact parameter considered is Cube_length/2. Particle impinges perpendicular to cube
+        # The energy loss for crossing the cube is calculated as a function of the impact parameter.
+        # Part of the cube is outside the Muffin Tin sphere.  For that part the electron density at
+        # the edge of the MT shpere is taken.
+        # This edge density again is determined by the lowest energy considered for the ELF. Take this not too low"""
+        # # calculate charge density distribution (Penn's pseudo charge density")
+        # self.PseudoChargeDensity()
+        # # put it in a radial form
+        # self.ConvertToRadialPseudoChargeDensity()
+        # # calculate sthe local stopping for that density (this takes time)
+        # self.stopping_versus_r()
+        # # calculate inpact parameter dependent stopping
 
-        Cube_length = (1.0 / self.UnitCellDensity) ** (1.0 / 3.0)
+        # Cube_length = (1.0 / self.UnitCellDensity) ** (1.0 / 3.0)
    
-        self.Nst = 500
-        sumB2 = 0
-        sumstop = 0
+        # self.Nst = 500
+        # sumB2 = 0
+        # sumstop = 0
 
-        self.b_dep_stop = np.zeros( self.Nst)
-        self.b_param = np.zeros( self.Nst)
-        steplength = Cube_length / (2 * self.Nst)
-        for i in range(self.Nst):
-            self.b_dep_stop[i] = 0.0
-            self.b_param[i] = (
-                i + 0.5
-            ) * steplength  # so start at b=Cube_length/(2*Nst) up to almost Cube_length/2
-            sumB2 += self.b_param[i] * self.b_param[i]
-            for j in range(self.Nst):
-                along = (
-                    j + 0.5
-                ) * steplength  # so from almost  central atom up to cube edge
+        # self.b_dep_stop = np.zeros( self.Nst)
+        # self.b_param = np.zeros( self.Nst)
+        # steplength = Cube_length / (2 * self.Nst)
+        # for i in range(self.Nst):
+            # self.b_dep_stop[i] = 0.0
+            # self.b_param[i] = (
+                # i + 0.5
+            # ) * steplength  # so start at b=Cube_length/(2*Nst) up to almost Cube_length/2
+            # sumB2 += self.b_param[i] * self.b_param[i]
+            # for j in range(self.Nst):
+                # along = (
+                    # j + 0.5
+                # ) * steplength  # so from almost  central atom up to cube edge
 
-                r = math.sqrt(along * along + self.b_param[i] * self.b_param[i])
-                if r > self.MT_radius:
-                    r = self.MT_radius - (
-                        r - self.MT_radius
-                    )  # folding back when outside mt radius
-                for current_index in range(self.NPoints):
-                    if r > self.r_array[current_index]:
-                        break  # so if we are never outside MT sphere
-                current_index = (
-                    current_index - 1
-                )  # this means if part crystal is empty this part get stopping of zero not the next value
-                self.b_dep_stop[i] += (
-                    2 * self.stop_array[current_index] * steplength / Cube_length
-                )  # the factor of 2 because we integrate only from edge to center
-                # not to the other edge
-            sumstop += self.b_param[i] * self.b_param[i] * self.b_dep_stop[i]
+                # r = math.sqrt(along * along + self.b_param[i] * self.b_param[i])
+                # if r > self.MT_radius:
+                    # r = self.MT_radius - (
+                        # r - self.MT_radius
+                    # )  # folding back when outside mt radius
+                # for current_index in range(self.NPoints):
+                    # if r > self.r_array[current_index]:
+                        # break  # so if we are never outside MT sphere
+                # current_index = (
+                    # current_index - 1
+                # )  # this means if part crystal is empty this part get stopping of zero not the next value
+                # self.b_dep_stop[i] += (
+                    # 2 * self.stop_array[current_index] * steplength / Cube_length
+                # )  # the factor of 2 because we integrate only from edge to center
+                # # not to the other edge
+            # sumstop += self.b_param[i] * self.b_param[i] * self.b_dep_stop[i]
   
-        print("estimate of average stopping:", sumstop / sumB2)
-        # now we are going to calculate the contribution of bunching to straggling
-        self.straggling_from_bunching = 0.0
-        self.straggling_from_bunching_rel_vacuum = 0.0
-        for i in range(self.Nst):
-            self.straggling_from_bunching += (
-                self.b_dep_stop[i] - sumstop / sumB2
-            ) ** 2 * self.b_param[i] ** 2
-            self.straggling_from_bunching_rel_vacuum += (
-                self.b_dep_stop[i]
-            ) ** 2 * self.b_param[i] ** 2
-        self.straggling_from_bunching = self.straggling_from_bunching / sumB2
-        self.straggling_from_bunching_rel_vacuum = (
-            self.straggling_from_bunching_rel_vacuum / sumB2
-        )
-        print(self.straggling_from_bunching, "bunching per unit cell")
-        self.straggling_from_bunching = self.straggling_from_bunching / Cube_length
-        self.straggling_from_bunching_rel_vacuum = (
-            self.straggling_from_bunching_rel_vacuum / Cube_length
-        )
-        print(self.straggling_from_bunching, "bunching angstrom")
-        print(
-            self.straggling_from_bunching / self.BohrStraggling,
-            "bunching rel to Bohr straggling",
-        )
-        print(
-            self.straggling_from_bunching_rel_vacuum
-            / Cube_length
-            / self.BohrStraggling,
-            "bunching rel to Bohr straggling_rel_vacuum",
-        )
-        print("self.BohrStraggling", self.BohrStraggling)
+        # print("estimate of average stopping:", sumstop / sumB2)
+        # # now we are going to calculate the contribution of bunching to straggling
+        # self.straggling_from_bunching = 0.0
+        # self.straggling_from_bunching_rel_vacuum = 0.0
+        # for i in range(self.Nst):
+            # self.straggling_from_bunching += (
+                # self.b_dep_stop[i] - sumstop / sumB2
+            # ) ** 2 * self.b_param[i] ** 2
+            # self.straggling_from_bunching_rel_vacuum += (
+                # self.b_dep_stop[i]
+            # ) ** 2 * self.b_param[i] ** 2
+        # self.straggling_from_bunching = self.straggling_from_bunching / sumB2
+        # self.straggling_from_bunching_rel_vacuum = (
+            # self.straggling_from_bunching_rel_vacuum / sumB2
+        # )
+        # print(self.straggling_from_bunching, "bunching per unit cell")
+        # self.straggling_from_bunching = self.straggling_from_bunching / Cube_length
+        # self.straggling_from_bunching_rel_vacuum = (
+            # self.straggling_from_bunching_rel_vacuum / Cube_length
+        # )
+        # print(self.straggling_from_bunching, "bunching angstrom")
+        # print(
+            # self.straggling_from_bunching / self.BohrStraggling,
+            # "bunching rel to Bohr straggling",
+        # )
+        # print(
+            # self.straggling_from_bunching_rel_vacuum
+            # / Cube_length
+            # / self.BohrStraggling,
+            # "bunching rel to Bohr straggling_rel_vacuum",
+        # )
+        # print("self.BohrStraggling", self.BohrStraggling)
 
-    def bunching_versus_E0(self):
-        # calculate charge density distribution (Penn's pseudo charge density")
-        self.PseudoChargeDensity()
-        # put it in a radial form
-        self.ConvertToRadialPseudoChargeDensity()
-        oldE0 = self.E0
+    # def bunching_versus_E0(self):
+        # # calculate charge density distribution (Penn's pseudo charge density")
+        # self.PseudoChargeDensity()
+        # # put it in a radial form
+        # self.ConvertToRadialPseudoChargeDensity()
+        # oldE0 = self.E0
        
-        if self.particle  == "proton":
-            self.E0 = 2
-        else:
-            self.E0 = self.first_electron_energy
+        # if self.particle  == "proton":
+            # self.E0 = 2
+        # else:
+            # self.E0 = self.first_electron_energy
 
-        StragglingResult1 = np.zeros(self.NStopping)
-        StragglingResult2 = np.zeros(self.NStopping)
-        Beam_incr = 1.25
-        NBunch = 35
-        for Ecounter in range(NBunch):
-            print("currently calculating No", Ecounter, "Energy", self.E0)
-            self.ParArray[self.NDFPAR + 1] = self.E0 * 1000
-            self.impact_dep_stop()
-            StragglingResult1[Ecounter] = (
-                self.straggling_from_bunching / self.BohrStraggling
-            )
-            StragglingResult2[Ecounter] = (
-                self.straggling_from_bunching_rel_vacuum / self.BohrStraggling
-            )
-            self.E0 = self.E0 * Beam_incr
+        # StragglingResult1 = np.zeros(self.NStopping)
+        # StragglingResult2 = np.zeros(self.NStopping)
+        # Beam_incr = 1.25
+        # NBunch = 35
+        # for Ecounter in range(NBunch):
+            # print("currently calculating No", Ecounter, "Energy", self.E0)
+            # self.ParArray[self.NDFPAR + 1] = self.E0 * 1000
+            # self.impact_dep_stop()
+            # StragglingResult1[Ecounter] = (
+                # self.straggling_from_bunching / self.BohrStraggling
+            # )
+            # StragglingResult2[Ecounter] = (
+                # self.straggling_from_bunching_rel_vacuum / self.BohrStraggling
+            # )
+            # self.E0 = self.E0 * Beam_incr
 
-        self.E0 = oldE0
-        self.x_axis  = np.zeros(NBunch)
-        self.Result1 = np.zeros(NBunch)
-        self.Result2 = np.zeros(NBunch)
-        E = self.first_proton_energy
-        self.NPoints = NBunch
-        for i in range(NBunch):
-            self.x_axis[i] = E
-            self.Result1[i] = StragglingResult1[i]
-            self.Result2[i] = StragglingResult2[i]
-            E = E * Beam_incr
+        # self.E0 = oldE0
+        # self.x_axis  = np.zeros(NBunch)
+        # self.Result1 = np.zeros(NBunch)
+        # self.Result2 = np.zeros(NBunch)
+        # E = self.first_proton_energy
+        # self.NPoints = NBunch
+        # for i in range(NBunch):
+            # self.x_axis[i] = E
+            # self.Result1[i] = StragglingResult1[i]
+            # self.Result2[i] = StragglingResult2[i]
+            # E = E * Beam_incr
 
 
 

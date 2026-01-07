@@ -1589,8 +1589,15 @@ class myWindow(QMainWindow):
         deltay=25
         self.CalculationOptionBox = QGroupBox(parent=self.tab_3,title="Calculation options")
         self.CalculationOptionBox.setGeometry(QRect(4,4,430,700)) 
+              
+        QLabel("maximum number of ω values considered ",parent=self.CalculationOptionBox).setGeometry(QRect(xpos,ypos,300,18))
+        self.NMaxEnergyStepsInput = QLineEdit(str(self.calc.MaxNPoints),parent= self.CalculationOptionBox )  
+        self.NMaxEnergyStepsInput.setGeometry(QRect(xpos+320,ypos, 45,18))
+        self.NMaxEnergyStepsInput.setValidator(QIntValidator(2,999999))
+        self.NMaxEnergyStepsInput.editingFinished.connect(self.MaxNPoints_changed) 
         
-        QLabel("Number of energies calulated for stopping curves",parent=self.CalculationOptionBox).setGeometry(QRect(xpos,ypos,300,18))
+        ypos+=deltay
+        QLabel("Number of projectile energies calulated for stopping curves",parent=self.CalculationOptionBox).setGeometry(QRect(xpos,ypos,300,18))
         self.NStoppingInput = QLineEdit(str(self.calc.NStopping),parent= self.CalculationOptionBox )  
         self.NStoppingInput.setGeometry(QRect(xpos+320,ypos, 45,18))
         self.NStoppingInput.setValidator(QIntValidator(1,1000))
@@ -1625,7 +1632,7 @@ class myWindow(QMainWindow):
         self.c_transitionInput.setGeometry(QRect(xpos+345,ypos, 75,18))
         self.c_transitionInput.setValidator(QDoubleValidator(0.0,0.1,6))
         self.c_transitionInput.editingFinished.connect(self.c_transition_changed)   
-        
+    def MaxNPoints_changed(self):self.calc.MaxNPoints=int(self.NMaxEnergyStepsInput.text())
     def NStopping_changed(self):self.calc.NStopping=int(self.NStoppingInput.text())   
     def EIncrement_changed(self):self.calc.IncrFactor=float(self.EIncrementInput.text())   
     def FirstEnergyElectron_changed(self):self.calc.first_electron_energy=float(self.FirstEnergyElectronInput.text()) 
