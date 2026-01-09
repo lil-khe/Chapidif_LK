@@ -2274,13 +2274,14 @@ double DDCS_incl_retardation(double omega, double theta)
       
     }
     
-    int single_Eps1Eps2(npArray ParameterArray, dcomp *eps, double q, double my_omega, int modelchoice)
+    dcomp single_Eps1Eps2(npArray ParameterArray, double q, double my_omega, int modelchoice)
     {
-        dcomp totaleps;
+        dcomp eps;
         copyP_to_Vars(ParameterArray.data(), modelchoice);
-        *eps=calc_total_eps( my_omega/Hartree, q);
+        eps=calc_total_eps( my_omega/Hartree, q);
         my_perror("eps1eps2 an error occured");
-        return 0;
+    
+        return eps;
     }
     //epslib.Eps1Eps2_q(self.ParArray,self.x_axis, eps, self.Energy_qplot, self.DFChoice)
     int  Eps1Eps2_q(npArray ParameterArray, npArray q_Array, npArrayComplex EpsArray, double omega, int modelchoice)

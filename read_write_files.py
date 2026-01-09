@@ -466,19 +466,19 @@ class read_write_files:
             return
        
            
-        elif self.runplot.text_curve4 != "--":    
+        elif self.runplot.Text_label[3] != "--":    
             with open(self.OutputFile, "a", encoding="utf-8") as file: 
 
-                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.text_curve1 +"`\t`" + self.runplot.text_curve2 + "`\t`" + self.runplot.text_curve3 + "`\t`" + self.runplot.text_curve4 + "`\n") 
+                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.Text_label[0] +"`\t`" + self.runplot.Text_label[1] + "`\t`" + self.runplot.Text_label[2] + "`\t`" + self.runplot.Text_label[3] + "`\n") 
               
                 for i in range(len(self.calc.Result1)):
                     a = "{:.4e} \t{:.4E} \t{:.4E} \t{:.4E}\t{:.4E}\n".format(
                         self.calc.x_axis[i], self.calc.Result1[i],self.calc.Result2[i],self.calc.Result3[i],self.calc.Result4[i])
                     file.write(a)    
-        elif self.runplot.text_curve3 != "--":  
+        elif self.runplot.Text_label[2] != "--":  
             with open(self.OutputFile, "a", encoding="utf-8") as file: 
 
-                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.text_curve1 +"`\t`" + self.runplot.text_curve2 + "`\t`" + self.runplot.text_curve3 + "`\n") 
+                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.Text_label[0] +"`\t`" + self.runplot.Text_label[1] + "`\t`" + self.runplot.Text_label[2] + "`\n") 
                 if cmd=="IMFP_stop_strag":
                     for i in range(len(self.calc.CurvesEnergy)):
                         a = "{:.4e} \t{:.4E} \t{:.4E} \t{:.4E}\n".format( self.calc.CurvesEnergy[i],self.calc.IMFPEnergy[i],
@@ -489,21 +489,21 @@ class read_write_files:
                         a = "{:.4e} \t{:.4E} \t{:.4E} \t{:.4E}\n".format(
                             self.calc.x_axis[i], self.calc.Result1[i],self.calc.Result2[i],self.calc.Result3[i])
                         file.write(a)      
-        elif self.runplot.text_curve2 != "--": 
+        elif self.runplot.Text_label[1] != "--": 
             with open(self.OutputFile, "a", encoding="utf-8") as file: 
 
-                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.text_curve1 + "`\t`" + self.runplot.text_curve2 + "`\n") 
+                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.Text_label[0] + "`\t`" + self.runplot.Text_label[1] + "`\n") 
                 
                 for i in range(len(self.calc.Result1)):
                     a = "{:.3f} \t{:.4E} \t{:.4E}\n".format(
                         self.calc.x_axis[i], self.calc.Result1[i], self.calc.Result2[i])
                     file.write(a)  
             return
-        elif self.runplot.text_curve1 != "--":     
+        elif self.runplot.Text_label[0] != "--":     
    
             with open(self.OutputFile, "a", encoding="utf-8") as file: 
 
-                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.text_curve1 + "`\n") 
+                file.write(self.Vuesz_descriptor + self.runplot.xlabel + "`\t`" + self.runplot.Text_label[0] + "`\n") 
                 
                 for i in range(len(self.calc.Result1)):
                     a = "{:.4e} \t{:.4E}\n".format(
@@ -536,29 +536,29 @@ class read_write_files:
             file.write("Add('xy', name='xy1', autoadd=False)\n")
             file.write("To('xy1')\n")
             file.write("Set('xData', '"+self.runplot.xlabel+"')\n")
-            file.write("Set('yData', '"+self.runplot.text_curve1+"')\n")
-            file.write("Set('key','"+ self.runplot.text_curve1+"')\n")
+            file.write("Set('yData', '"+self.runplot.Text_label[0]+"')\n")
+            file.write("Set('key','"+ self.runplot.Text_label[0]+"')\n")
             file.write("To('..')\n")
-            if self.runplot.text_curve2 != "--":
+            if self.runplot.Text_label[1] != "--":
                 file.write("Add('xy', name='xy2', autoadd=False)\n")
                 file.write("To('xy2')\n")
                 file.write("Set('xData', '"+self.runplot.xlabel+"')\n")
-                file.write("Set('yData', '"+self.runplot.text_curve2+"')\n")
-                file.write("Set('key','"+ self.runplot.text_curve2+"')\n")
+                file.write("Set('yData', '"+self.runplot.Text_label[1]+"')\n")
+                file.write("Set('key','"+ self.runplot.Text_label[1]+"')\n")
                 file.write("To('..')\n")
-            if self.runplot.text_curve3 != "--":
+            if self.runplot.Text_label[2] != "--":
                 file.write("Add('xy', name='xy3', autoadd=False)\n")
                 file.write("To('xy3')\n")
                 file.write("Set('xData', '"+self.runplot.xlabel+"')\n")
-                file.write("Set('yData', '"+self.runplot.text_curve3+"')\n")
-                file.write("Set('key','"+ self.runplot.text_curve3+"')\n")
+                file.write("Set('yData', '"+self.runplot.Text_label[2]+"')\n")
+                file.write("Set('key','"+ self.runplot.Text_label[2]+"')\n")
                 file.write("To('..')\n")    
-            if self.runplot.text_curve4 != "--":
+            if self.runplot.Text_label[3] != "--":
                 file.write("Add('xy', name='xy4', autoadd=False)\n")
                 file.write("To('xy4')\n")
                 file.write("Set('xData', '"+self.runplot.xlabel+"')\n")
-                file.write("Set('yData', '"+self.runplot.text_curve4+"')\n")
-                file.write("Set('key','"+ self.runplot.text_curve4+"')\n")
+                file.write("Set('yData', '"+self.runplot.Text_label[3]+"')\n")
+                file.write("Set('key','"+ self.runplot.Text_label[3]+"')\n")
                 file.write("To('..')\n")      
             file.write("Add('key', name='key1', autoadd=False)\n")
             file.write("To('..')\n")
@@ -676,11 +676,11 @@ class read_write_files:
             file.write(
                 self.runplot.xlabel
                 + "\t"
-                + self.runplot.text_curve1
+                + self.runplot.Text_label[0]
                 + "\t"
-                + self.runplot.text_curve2
+                + self.runplot.Text_label[1]
                 + "\t"
-                + self.runplot.text_curve3)
+                + self.runplot.Text_label[2])
              
             file.write(    
                 "\tIMFP Bethe Disp. \tStop.  Bethe Disp.  \tStrag.  Bethe Disp.  "

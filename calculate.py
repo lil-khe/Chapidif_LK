@@ -392,7 +392,6 @@ class calculate():
     
     def calculate_eps_array(self):
         NPnts=np.size(self.x_axis)
-        print(NPnts,"number points")
         eps = np.zeros(NPnts,dtype=np.complex128)
         epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
         epslib.Eps1Eps2(self.ParArray,self.x_axis, eps, self.q, self.DFChoice)
@@ -1285,7 +1284,7 @@ class calculate():
         self.x_axis= np.linspace(E_lower,E_upper,self.NPoints )  
   
         epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
-        eps=self.calculate_eps_array(1)
+        eps=self.calculate_eps_array()
         
         self.Result1= np.imag(eps)
         self.Result1 *=  Q_recoil_au / (2*cnst.PI**2)* width_per_au   # momentum density per  a.u^3.
@@ -1298,52 +1297,65 @@ class calculate():
         self.q=self.q_old 
 
     def CalcFresnel(self):  # have to check this one
-        self.x_axis = np.zeros(self.NPoints)
-        self.Result1 = np.zeros(self.NPoints)
-        self.Result2 = np.zeros(self.NPoints)
-        epscomplex=complex(1.0,0.0)  # so it is defined
-        epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
-        epslib.single_Eps1Eps2(self.ParArray, epscomplex,0.0, self.E_Fresnel,  self.DFChoice)
-        
       
-        N1=complex(1.0,0.0)  # complex index of refr. vacuum
-        N2=epscomplex**0.5    # complex index  of refr.  medium
-        N=N2.real
-    
-        for i in range(self.NPoints):
-                    self.x_axis[i]=90.0*(i+0.5)/self.NPoints
-                    θi=self.x_axis[i]*math.pi/180.0
-                    θt = cmath.asin(N1/N*math.sin(θi))  # is  θt complexz or real??
-                    rs = (N1*cmath.cos(θi)-N2*cmath.cos(θt)) / (N1*cmath.cos(θi)+N2*cmath.cos(θt))
-                    rp = (N2*cmath.cos(θi)-N1*cmath.cos(θt)) / (N1*cmath.cos(θt)+N2*cmath.cos(θi))
-                    self.Result1[i]=abs(rs)
-                    self.Result2[i]=abs(rp)
-                    # self.Result1[i]=cmath.phase(rp/rs)
-                    # self.Result2[i]=math.atan(abs(rp)/abs(rs))
+        stepsize=(90.0/self.NPoints)  # in degrees
+        self.x_axis= np.linspace(0.5*stepsize,90-0.5*stepsize, self.NPoints)  
+        θi=self.x_axis*math.pi/180.0  # in rad
+        print("θi",θi)
+        epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
+        eps= epslib.single_Eps1Eps2(self.ParArray, 0.0, self.E_Fresnel,  self.DFChoice)
+        print("calculate, eps1",np.real(eps),"eps2", np.imag(eps))
+        
+#from: https://github.com/polyanskiy/refractiveindex.info-scripts/blob/master/calc/reflection.py
+        n1=complex(1.0,0.0)  # complex index of refr. vacuum
+        n2=eps**0.5    # complex index  of refr.  medium
+        θt = np.asin(n1/n2*np.sin(θi))  #   θt is complex!!
+        rs = (n1*np.cos(θi)-n2*np.cos(θt)) / (n1*np.cos(θi)+n2*np.cos(θt))
+        rp = (n2*np.cos(θi)-n1*np.cos(θt)) / (n1*np.cos(θt)+n2*np.cos(θi))
+        self.Result1 = abs(rs)
+        self.Result2 = abs(rp)
+        self.Result3 = np.atan(abs(rp)/abs(rs))  #psi (in radians
+        self.Result4 = np.angle(rp/rs)    #Delta (in radians)
+        
+        # for i in range(self.NPoints):
+                
+                   
+                    # θt = cmath.asin(n1/n2*math.sin(θi))  #   θt is complex!!
+                    # rs = (n1*cmath.cos(θi)-n2*cmath.cos(θt)) / (n1*cmath.cos(θi)+n2*cmath.cos(θt))
+                    # rp = (n2*cmath.cos(θi)-n1*cmath.cos(θt)) / (n1*cmath.cos(θt)+n2*cmath.cos(θi))
+                    # self.Result1[i]=abs(rs)
+                    # self.Result2[i]=abs(rp)
+                    # # self.Result1[i]=cmath.phase(rp/rs)
+                    # # self.Result2[i]=math.atan(abs(rp)/abs(rs))
                     
 #from: https://github.com/polyanskiy/refractiveindex.info-scripts/blob/master/calc/reflection.py
-# θi = np.deg2rad(θi)              # incidence angle (radians)
-# θt = np.arcsin(n1/n2*np.sin(θi)) # refraction angle (radians)
 
-# rs = (n1*np.cos(θi)-n2*np.cos(θt)) / (n1*np.cos(θi)+n2*np.cos(θt))
-# rp = (n2*np.cos(θi)-n1*np.cos(θt)) / (n1*np.cos(θt)+n2*np.cos(θi))
-
-# Rs = np.abs(rs)**2
-# Rp = np.abs(rp)**2
     def DeltaPsi(self):
+        #from: https://github.com/polyanskiy/refractiveindex.info-scripts/blob/master/calc/reflection.py
         print("in delta psi")
-        self.eps1eps2()
-        θi=self.phi_ellipsometry*math.pi/180.0
-        N1=complex(1.0,0.0)  # complex index of refr. vacuum
-        for i in range(self.NPoints):
-            epscomplex=complex(self.Result1[i], self.Result2[i])
-            N2=epscomplex**0.5 
-            N=N2.real
-            θt = cmath.asin(N1/N*math.sin(θi))
-            rs = (N1*cmath.cos(θi)-N2*cmath.cos(θt)) / (N1*cmath.cos(θi)+N2*cmath.cos(θt))
-            rp = (N2*cmath.cos(θi)-N1*cmath.cos(θt)) / (N1*cmath.cos(θt)+N2*cmath.cos(θi))
-            self.Result1[i]=cmath.phase(rp)-cmath.phase(rs)
-            self.Result2[i]=math.atan(abs(rp)/abs(rs))
+        self.calculate_energy_axis(1)
+        epscomplex =self.calculate_eps_array()
+      
+        n1=complex(1.0,0.0)  # complex index of refr. vacuum
+        n2=epscomplex**0.5   #complex array n2 as function omega
+       
+        θi= np.deg2rad(self.phi_ellipsometry)# θi: single (real) value
+        θt = np.arcsin(n1/n2*np.sin(θi))  # θt: complex array
+        rs = (n1*np.cos(θi)-n2*np.cos(θt)) / (n1*np.cos(θi)+n2*np.cos(θt))
+        rp = (n2*np.cos(θi)-n1*np.cos(θt)) / (n1*np.cos(θt)+n2*np.cos(θi))
+
+        self.Result1 = np.abs(rs)**2
+        self.Result2 = np.abs(rp)**2
+        self.Result3 = np.rad2deg(np.angle(rs)) # phase rs
+        self.Result4 = np.rad2deg(np.angle(rp))  # phase rp
+        # for i in range(self.NPoints):
+            # N2=epscomplex**0.5 
+            # N=N2.real
+            # θt = cmath.asin(N1/N*math.sin(θi))
+            # rs = (N1*cmath.cos(θi)-N2*cmath.cos(θt)) / (N1*cmath.cos(θi)+N2*cmath.cos(θt))
+            # rp = (N2*cmath.cos(θi)-N1*cmath.cos(θt)) / (N1*cmath.cos(θt)+N2*cmath.cos(θi))
+            # self.Result1[i]=cmath.phase(rp)-cmath.phase(rs)
+            # self.Result2[i]=math.atan(abs(rp)/abs(rs))
             
             
                     
