@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.15...3.27)
 project(chapidif_nanobind) # Replace 'my_project' with the name of your project
-
+if(MINGW)
+    message(STATUS "Building with mingw-w64")
+else()
+    message(STATUS "Not building with mingw-w64")
+endif()
 if (CMAKE_VERSION VERSION_LESS 3.18)
   set(DEV_MODULE Development)
 else()

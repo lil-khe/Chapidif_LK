@@ -1,5 +1,6 @@
 # generic python modules
-import os
+#import os
+
 import sys
 import math
 import cmath
@@ -8,30 +9,23 @@ import numpy as np
 import time
 #my stuff
 import constants as cnst
-from build import epslib
-
+print("platform:",sys.platform)
+if(sys.platform == 'linux'):
+    # to compile epslib issue (on Linux) in the source directory:
+    # cmake -S . -B LinuxBuild
+    # cmake --build LinuxBuild
+    from LinuxBuild import epslib
+elif(sys.platform == 'win32'): 
+    from WindowsBuild import epslib
+elif(sys.platform == 'darwin'):   
+    from MacBuild import epslib
+      
 
 class calculate():
     def __init__(self,parent):
         self.MyChapApp=parent
-        # mypath = os.path.dirname(os.path.realpath(__file__)) + "/"
-
-        # if sys.maxsize == 2147483647:  #32 bit version, ancient
-            # if os.name == "posix":
-                # mypath = mypath + "clib/epslib-lin32.so"
-            # else:  # os.name == 'nt':
-                # mypath = mypath + "clib/epslib-win32.dll"
-        # if sys.maxsize == 9223372036854775807:  #64 bit almost always
-            # if os.name == "posix" and sys.platform == "linux":
-                # mypath = mypath + "clib/epslib-lin64.so"
-            # elif os.name == "posix" and sys.platform == "darwin":
-                # mypath = mypath + "clib/epslib-mac.so"
-            # else:  
-                # mypath = mypath +  "\\clib\\epslib-win64.dll"
         epslib.test()
-        self.init()
-
-        
+        self.init()        
     def init(self):
 
 #########start variables associated with DF, interfaced in tab1, and written to DF file=========== 
@@ -53,7 +47,6 @@ class calculate():
         self.delayed_dispersion = 0  
         self.Add_Doppler_Width  = 0  # 0 constant width, 1 add Doppler width ("classical models only")
         
-
         self.DFmodel="Mermin"
         self.AddELF: int = 1  # 1 add elf 0 add chi
         self.Stopping_calc_quality = 0
@@ -130,12 +123,14 @@ class calculate():
         self.first_electron_energy: float =round( 0.5 * 0.5**2 * cnst.HARTREE / 1000.0,6)  # E (keV) corresponding to v=0.5 a.u.
         self.first_proton_energy: float =round(0.5 * 0.5**2 * cnst.Mp * cnst.HARTREE / 1000.0,3) # E (keV) corresponding to v=0.5 a.u.
         self.w_p_TPP = 15.0   #for TPP formula
-        self.w_p_Penn = 1e8   # maximum value w_p penn above that use U
+
         self.U_factor=0.0  # contribution of U to the peak position
         self.Q_Kaneko_transform = 1.0
         self.l_Kaneko_transform = 1
         self.Approximations= False
         self.N_oscillator_used = self.maxOscillators
+        self.First_oscillator_transform = 0
+        self.Last_oscillator_transform = self.maxOscillators - 1
   
 #========================== for communicating with epslib=======================
 
@@ -154,7 +149,6 @@ class calculate():
     def ZeroDF(self):
         self.InitDF()
         self.MyChapApp.update_all_tables()
-
 
     def InitDF(self):  # init variables tab1
         self.Amps = [0.0] * self.maxOscillators
@@ -387,7 +381,7 @@ class calculate():
             logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,NStep)
             self.x_axis=linearXaxis+logXaxis
         self.xstepsize=np.gradient(self.x_axis)
-        print("x axis", self.x_axis)
+        
     # ====================================================    
     
     def calculate_eps_array(self):
@@ -407,7 +401,6 @@ class calculate():
     def oneovereps1eps2(self):
         FineMeshFactor=1
         self.calculate_energy_axis(FineMeshFactor)
-        print("x-axis",self.x_axis)
         eps =self.calculate_eps_array()
         self.Result1=np.real(1.0/eps)
         self.Result2=-np.imag(1.0/eps)  # so the loss function not 1/eps2
@@ -1126,7 +1119,8 @@ class calculate():
         self.stopping_fine = np.zeros(self.range_integration_factor*self.NStopping)
         self.straggling_fine = np.zeros(self.range_integration_factor*self.NStopping)
         self.energy_fine = np.zeros(self.range_integration_factor*self.NStopping)
-
+        self.velocity_fine = np.zeros(self.range_integration_factor*self.NStopping)
+        
         stopping_before=0.0  
         straggling_before=0.0 
         energy_before=0.0 
@@ -1139,6 +1133,7 @@ class calculate():
             stopping_step= (stopping_after-stopping_before)/self.range_integration_factor
             for j in range(self.range_integration_factor):
                 self.energy_fine[counter]= energy_before+Estep*(j+1)
+                self.velocity_fine[counter] = self.velocity_projectile(self.energy_fine[counter])
                 self.stopping_fine[counter]=stopping_before+stopping_step*(j+1)
                 self.straggling_fine[counter]=straggling_before+straggling_after*(j+1)
                 counter+=1
@@ -1149,9 +1144,13 @@ class calculate():
     def projectile_range(self):
         self.get_stopping_fine()
         csda_range=0.0  
-        
-        Energy_before=0.0  
-        self.x_axis = self.energy_fine 
+        print("self.MyChapApp.runplot.x_axis_keV",self.MyChapApp.runplot.x_axis_keV)
+        Energy_before=0.0 
+        if self.MyChapApp.runplot.x_axis_keV: 
+            self.x_axis = self.energy_fine 
+        else:
+            print("velocity")
+            self.x_axis = self.velocity_fine 
         self.Result1 = np.zeros(self.range_integration_factor*self.NStopping)
         for i in range(self.NStopping*self.range_integration_factor):
             csda_range += (self.energy_fine[i]-Energy_before)*1000/  self.stopping_fine[i] 
@@ -1296,26 +1295,26 @@ class calculate():
         print("electrons per unit cell",area)
         self.q=self.q_old 
 
-    def CalcFresnel(self):  # have to check this one
+    def Fresnel_at_E(self):  # thus as a function of angle
       
         stepsize=(90.0/self.NPoints)  # in degrees
         self.x_axis= np.linspace(0.5*stepsize,90-0.5*stepsize, self.NPoints)  
-        θi=self.x_axis*math.pi/180.0  # in rad
-        print("θi",θi)
+        θi=self.x_axis*math.pi/180.0  # array in rad
+      
         epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
         eps= epslib.single_Eps1Eps2(self.ParArray, 0.0, self.E_Fresnel,  self.DFChoice)
-        print("calculate, eps1",np.real(eps),"eps2", np.imag(eps))
+     
         
 #from: https://github.com/polyanskiy/refractiveindex.info-scripts/blob/master/calc/reflection.py
-        n1=complex(1.0,0.0)  # complex index of refr. vacuum
-        n2=eps**0.5    # complex index  of refr.  medium
-        θt = np.asin(n1/n2*np.sin(θi))  #   θt is complex!!
+        n1=complex(1.0,0.0)  # number: complex index of refr. vacuum
+        n2=eps**0.5    # number  complex index  of refr.  medium
+        θt = np.asin(n1/n2*np.sin(θi))  #array,   θt is complex!!
         rs = (n1*np.cos(θi)-n2*np.cos(θt)) / (n1*np.cos(θi)+n2*np.cos(θt))
         rp = (n2*np.cos(θi)-n1*np.cos(θt)) / (n1*np.cos(θt)+n2*np.cos(θi))
         self.Result1 = abs(rs)
         self.Result2 = abs(rp)
-        self.Result3 = np.atan(abs(rp)/abs(rs))  #psi (in radians
-        self.Result4 = np.angle(rp/rs)    #Delta (in radians)
+        self.Result3 = np.rad2deg(np.atan(abs(rp)/abs(rs)) ) #psi (in radians
+        self.Result4 = np.rad2deg(np.angle(rp/rs) )   #Delta (in radians)
         
         # for i in range(self.NPoints):
                 
@@ -1330,7 +1329,7 @@ class calculate():
                     
 #from: https://github.com/polyanskiy/refractiveindex.info-scripts/blob/master/calc/reflection.py
 
-    def DeltaPsi(self):
+    def Fresnel_at_angle(self): # thus as a function of energy
         #from: https://github.com/polyanskiy/refractiveindex.info-scripts/blob/master/calc/reflection.py
         print("in delta psi")
         self.calculate_energy_axis(1)
@@ -1344,10 +1343,10 @@ class calculate():
         rs = (n1*np.cos(θi)-n2*np.cos(θt)) / (n1*np.cos(θi)+n2*np.cos(θt))
         rp = (n2*np.cos(θi)-n1*np.cos(θt)) / (n1*np.cos(θt)+n2*np.cos(θi))
 
-        self.Result1 = np.abs(rs)**2
-        self.Result2 = np.abs(rp)**2
-        self.Result3 = np.rad2deg(np.angle(rs)) # phase rs
-        self.Result4 = np.rad2deg(np.angle(rp))  # phase rp
+        self.Result1 = np.abs(rs)#**2
+        self.Result2 = np.abs(rp)#**2
+        self.Result3 = np.rad2deg(np.atan(abs(rp)/abs(rs)) ) #psi (in radians
+        self.Result4 = np.rad2deg(np.angle(rp/rs) )   #Delta (in radians)
         # for i in range(self.NPoints):
             # N2=epscomplex**0.5 
             # N=N2.real
@@ -1571,17 +1570,16 @@ class calculate():
         self.q=0.0
         self.oneovereps1eps2()
         self.q=current_q
-        if self.N_oscillator_used > self.maxOscillators:
-            self.N_oscillator_used = self.maxOscillators
+        N_oscillator_used = self.Last_oscillator_transform -self.First_oscillator_transform+1 
+        print("first,last",self.First_oscillator_transform,self.Last_oscillator_transform)
+        if N_oscillator_used < 1:
+            print(" oscillator range input error")
+            return
         epslib.eps_Scaling_init(self.ParArray, self.DFChoice)
-        omega_p=self.w_p_Penn
-        if omega_p <=0:  
-            omega_p = 1e8   # so the U correction never occur
-            
         
         if constant_stepsize:
             incrementfactor=1
-            CurrentStepsize=(self.UpperELimit-self.LowerELimit)/self.N_oscillator_used
+            CurrentStepsize=(self.UpperELimit-self.LowerELimit)/N_oscillator_used
             CurrentEnergy=self.LowerELimit+0.5*CurrentStepsize
             old_Ai=self.Amps[0]  #Hack, remove
             
@@ -1600,8 +1598,8 @@ class calculate():
             incrementfactor=rangefactor**exponent
             
         sumnewAi=0.0
-        for i in range(self.N_oscillator_used):
-            Loss_at_E = epslib.lossfunction_inclGOS_atE(self.ParArray, CurrentEnergy, self.DFChoice )
+        for i in range(self.First_oscillator_transform,self.Last_oscillator_transform+1):
+            Loss_at_E = epslib.Lossfunction_inclGOS_atE(self.ParArray, CurrentEnergy, self.DFChoice )
             g_omega_prefactor = 2.0 / (cnst.PI * CurrentEnergy)  # Penn delta function  in the case  gamma=0
             # alternative from nguyen  for gamma !=0 (J of Phys Chem 119 23627 2015) does not work Sum A_i> 1
             # g_omega_prefactor=2.0/(cnst.PI*CurrentEnergy**2*CurrentGamma) * \
@@ -1609,24 +1607,16 @@ class calculate():
            
             Amp = g_omega_prefactor * Loss_at_E * CurrentStepsize
             sumnewAi+=Amp
-            if CurrentEnergy  < omega_p:
-                self.Amps[i] =Amp
-                self.Omegas[i] =CurrentEnergy
-                self.Gammas[i] = 1.*CurrentStepsize  # used to be 1.2
-                self.Alphas[i]= 1.0
-                self.Us[i]= 0.0
-            else:
-                U=np.sqrt(CurrentEnergy*CurrentEnergy - omega_p*omega_p)
-                NewA=Amp*CurrentEnergy*CurrentEnergy/(omega_p*omega_p)
-                self.Amps[i]= NewA
-                self.Omegas[i]=omega_p
-                self.Gammas[i] = 1.2
-                self.Alphas[i] = 1.0
-                self.Us[i]=U
+           
+            self.Amps[i] =Amp
+            self.Omegas[i] =CurrentEnergy
+            self.Gammas[i] = 1.*CurrentStepsize  # used to be 1.2
+            self.Alphas[i]= 1.0
+            self.Us[i]= 0.0
                  
             CurrentStepsize *= incrementfactor
             CurrentEnergy = CurrentEnergy + CurrentStepsize
-        self.DFmodel='Mermin'
+        self.DFmodel = 'Mermin'
         self.AddELF=1
         for i in range(self.maxGOS):
             self.ConcGOS[i] = 0.0
@@ -1636,7 +1626,7 @@ class calculate():
             self.Conc_Belkacem[i] = 0.0
         print("old ai", old_Ai, "sumnewAi ",sumnewAi )   
         for i in range(self.maxOscillators):  
-            self.Amps[i]=self.Amps[i]* old_Ai/ sumnewAi  #kack, remove
+            self.Amps[i]=self.Amps[i]* old_Ai/ sumnewAi  #hack, remove
         self.MyChapApp.update_all_tables()    
         
         
@@ -1708,7 +1698,7 @@ class calculate():
                 square_value= old_position**2-self.Amps[i] - U**2
                 if square_value >= 0.0:
                     self.Omegas[i] = math.sqrt( old_position**2-self.Amps[i] - U**2) 
-                else:     # sometimes negative due to rounding errors
+                else:     #square_value sometimes negative due to rounding errors
                     self.Omegas[i] = 0.0  
          self.DFmodel = 'Drude'
     
@@ -1717,11 +1707,16 @@ class calculate():
 
     def Change_U(self):
         self.MyChapApp.UpdateStatus("")
+        Nosc = self.Last_oscillator_transform -self.First_oscillator_transform+1 
+        if Nosc < 0:
+            print("osc range input error")
+        if Nosc > self.maxOscillators:
+            Nosc=self.maxOscillators
         if self.U_factor < 0.0:
             print("U factor should be positive")
             return
         if self.U_factor < 1 or(self.U_factor==1 and self.DFmodel == "drude"):
-            for i in range(self.maxOscillators):  # now calculate new values for new U
+            for i in range(self.First_oscillator_transform,self.Last_oscillator_transform+1):  # now calculate new values for new U,
                 
                 oldA = self.Amps[i]
                 if oldA != 0.0:
@@ -1746,167 +1741,64 @@ class calculate():
             print(" U factor too large")
             return                 
         self.MyChapApp.update_all_tables()              
-                    
 
-                 
-        
-
-    def Calc_Os_Strength(self):
-       # # self.oneovereps2() 
-        # self.eps1eps2()
-        # for i in range(self.NPoints):
-            # denominator = (self.Result1[i] * self.Result1[i] + self.Result2[i] * self.Result2[i])
-            # self.Result1[i] = (2.0 * self.x_axis[i] / (cnst.PI * self.PlasmonE**2) * self.Result2[i])  # oscillator strength based on eps2
-            # Im_one_over_eps = self.Result2[i] / denominator  #this is Im[-1/eps],the loss function, NOT im[1/eps]
-            # self.Result2[i] = (2.0 * self.x_axis[i] / (cnst.PI * self.PlasmonE**2) * Im_one_over_eps)  
+    def Calc_Os_Strength(self): 
         self.oneovereps1eps2()  # after much confusion osc. strength based on omega times loss function , see Nikjoo book eq. 19.36, not omega times eps2
         for i in range(self.NPoints):
-            self.Result1[i] = (2.0 * self.x_axis[i] / (cnst.PI * self.PlasmonE**2) * self.Result2[i])  # oscillator strength based on 1/eps2, put in result1
-
-
-    
+            self.Result1[i] = (2.0 * self.x_axis[i] / (cnst.PI * self.PlasmonE**2) * self.Result2[i])  # oscillator strength based on 1/eps2, put in result1    
             
     def dyn_struct_factor(self):
         FineMeshFactor=9
-        # stepsize_fine = self.Stepsize/FineMeshFactor
         length_fine = self.NPoints*FineMeshFactor
-        # CenterFirstBin_fine = self.LowerELimit + 0.5*stepsize_fine # first energy point of plot local!
-        # CenterLastBin_fine = self.UpperELimit - 0.5*stepsize_fine # last energy point
         self.calculate_energy_axis(FineMeshFactor)
         eps_fine=self.calculate_eps_array() 
         one_over_eps=1.0/eps_fine
-        
-       # self.Result1_fine = np.real(one_over_eps)
         self.Result1_fine = - np.imag(one_over_eps)  #this is Im[-1/eps],the loss function, NOT im[1/eps]
         self.Result2_fine = np.zeros(length_fine)
         elecdens = self.Nelec_per_UC *self.UnitCellDensity * cnst.BOHR**3  # elec/per a.u.^3
         omega_p_square=4.0 * cnst.PI * elecdens #Hartree square
         self.Result1_fine *= self.q**2 / ( cnst.PI* omega_p_square) /cnst.HARTREE
         self.Result2_fine = np.cumsum(self.Result1_fine*self.x_axis*self.xstepsize)
-    #    sum_so_far=0.0
-        # for i in range(length_fine):
-            # currentE = CenterFirstBin_fine+i*stepsize_fine
-            # sum_so_far +=  self.Result1_fine[i] * currentE * stepsize_fine
-            # self.Result2_fine[i]= sum_so_far
         self.recast( FineMeshFactor,only_2=True)    
       
     
     def DL_from_OOS(self):
-        self.ZeroDF()
-        Nosc=self.N_oscillator_used
+        Nosc = self.Last_oscillator_transform -self.First_oscillator_transform+1 
+        if Nosc < 0:
+            print("osc range input error")
         if Nosc > self.maxOscillators:
             Nosc=self.maxOscillators
-       
         step = self.Stepsize
         CenterFirstBin = self.LowerELimit + 0.5*step # first energy point of plot
         CenterLastBin  = self.UpperELimit - 0.5*step # last energy point assuming constant stepsiize
-
         linearLastE=self.LowerELimit+Nosc*step 
-        linearXaxis= np.linspace(CenterFirstBin, linearLastE, Nosc) 
+        x_axis= np.linspace(CenterFirstBin, linearLastE, Nosc) 
         missing_bit=self.UpperELimit - linearLastE
-        print("missing bit",missing_bit)
-        logXaxis=np.geomspace( step/5,missing_bit ,Nosc)
-        last_step=logXaxis[Nosc-1]-logXaxis[Nosc-2]
-        logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,Nosc)
-        x_axis=linearXaxis+logXaxis
+        if missing_bit > 0.0:
+            logXaxis=np.geomspace( step/5,missing_bit ,Nosc)
+            last_step=logXaxis[Nosc-1]-logXaxis[Nosc-2]
+            logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,Nosc)
+            x_axis=x_axis+ logXaxis
         xstepsize=np.gradient(x_axis)
-        print("linearXaxis",linearXaxis)
-        print("logXaxis",logXaxis)
         omega=x_axis[0]
         currentBin=0
-        for i in range(self.N_oscillator_used):
-            omega = x_axis[i]
+        for i in range(self.First_oscillator_transform,self.Last_oscillator_transform):
+            omega = x_axis[i-self.First_oscillator_transform]
             while omega >  self.OOSEnergy[currentBin]:
                 currentBin +=1
             PosWithinBin =  (omega - self.OOSEnergy[currentBin-1])/ (self.OOSEnergy[currentBin] - self.OOSEnergy[currentBin-1]) 
             currentOOS = self.OOS[currentBin-1] + PosWithinBin*(self.OOS[currentBin]-self.OOS[currentBin-1])
             currentELF=currentOOS/(2.0*omega)*cnst.PI *  self.PlasmonE**2   
             g_omega_prefactor = 2.0 / (cnst.PI * omega) 
-            Amp = g_omega_prefactor *currentELF * xstepsize[i]
+            Amp = g_omega_prefactor *currentELF * xstepsize[i-self.First_oscillator_transform]
             self.Omegas[i]=omega
             self.Amps[i]=Amp
-            self.Gammas[i]=1.15*xstepsize[i]
+            self.Gammas[i]=1.15*xstepsize[i-self.First_oscillator_transform]
             self.Alphas[i]=1.0
             self.Us[i]=0
-       # #=========
-       # linearLastE=self.LowerELimit+Npnts*step_fine 
-            # linearXaxis= np.linspace(CenterFirstBin,CenterFirstBin+(Npnts-1)*step_fine, Npnts) 
-            # missing_bit=self.UpperELimit - (self.LowerELimit+Npnts*step_fine )
-            # logXaxis=np.geomspace( step_fine/20,missing_bit ,Npnts)
-            # last_step=logXaxis[Npnts-1]-logXaxis[Npnts-2]
-            # logXaxis=np.geomspace(self.Stepsize/20,missing_bit-0.5*last_step,Npnts)
-            # self.x_axis=linearXaxis+logXaxis
-       #===========
-        
-        # # # Icomp=0
-        # # # OOSstepsize=np.gradient(self.OOSEnergy)
-        # # # for i in range(self.calc.N_OOS):
-                # # # if(self.OOSEnergy[i] > self.LowerELimit:
-                    # # # Lower_i=i
-                    # # # print("lower i",Lower_i)
-                    # # # break
-        # # # for i in range(lower_i, self.N_oscillator_used):
-            # # # for i in range(self.calc.N_OOS):
-                # # # if(OOSEnergy[i] > x_axis[i]+xstepsize):
-                    # # # Upper_i = i
-                    # # # print("upper i", Upper_i)
-                    # # # break
-                # # # self.Omegas[Icomp]= x_axis[i]
-                # # # OOS_interval=np.sum(Lower_i,Upper_i)# what happens aif lower_i=upper_i?
-                # # # g_omega_prefactor = 2.0 / (cnst.PI * x_axis[Icomp) 
-                # # # Amp = g_omega_prefactor *currentELF * OOSstepsize[i]
-                # # # self.Amps[Icomp]=Amp
-                # # # self.Gammas[Icomp]=1.3*xstepsize[i]
-                # # # self.Alphas[Icomp]=1.0
-                # # # self.Us[Icomp]=0
-                
-                
-                
-            
-    # def DL_from_OOS(self):
-        # self.ZeroDF()
-        # if self.N_oscillator_used > self.maxOscillators:
-            # self.N_oscillator_used.set(self.maxOscillators)
-        # self.PlasmonE= ( np.sqrt(4.0 * cnst.PI * self.UnitCellDensity * cnst.BOHR**3)
-                # * cnst.HARTREE )  # make sure we have the current one, w_p for one e- per u.c.
-       
-        # omega= self.CenterFirstBin
-        # rangefactor=(self.UpperELimit)/omega
-        # exponent=1.0/self.N_oscillator_used
-        # incrementfactor=rangefactor**exponent
-    
-        # CurrentStepsize=omega*(incrementfactor-1)
-        # currentBin=0
-        # for i in range(self.N_oscillator_used):
-            # while omega >  self.OOSEnergy[currentBin]:
-                # currentBin +=1
-            # PosWithinBin =  (omega - self.OOSEnergy[currentBin-1])/ (self.OOSEnergy[currentBin] - self.OOSEnergy[currentBin-1])
-            # currentOOS = self.OOS[currentBin-1] + PosWithinBin*(self.OOS[currentBin]-self.OOS[currentBin-1])
-        
-           
-            # currentELF=currentOOS/(2.0*omega)*cnst.PI *  self.PlasmonE**2
-            # g_omega_prefactor = 2.0 / (cnst.PI * omega) 
-            # Amp = g_omega_prefactor *currentELF * CurrentStepsize
-            # CurrentStepsize *= incrementfactor    
-            # # self.Omegas[i].set(f"{omega:.4g}")
-            # # self.Amps[i].set(f"{Amp:.5g}")
-            # # self.Gammas[i].set(f"{1.3*CurrentStepsize:.4g}") 
-            # # self.Alphas[i].set("1.0")
-            # # self.Us[i].set("0.0")
-            # self.Omegas[i]=omega
-            # self.Amps[i]=Amp
-            # self.Gammas[i]=1.3*CurrentStepsize 
-            # self.Alphas[i]=1.0
-            # self.Us[i]=0
-            # omega=omega + CurrentStepsize 
-            # if omega > self.OOSEnergy[self.N_OOS - 1]:
-                    # return
-
-
-        
              
     def PseudoChargeDensity(self):
-        """calculate the distribution of the charge density within the Penn Pseaudo charge picture"""
+        """calculate the distribution of the charge density within the Penn Pseudo charge picture"""
         copyq=self.q
         self.q=0.05  # make sure elf is calculated near the optical limit
         self.oneovereps1eps2()  # calculartes also re[1/eps] in result1, but later overwritten here
@@ -1987,17 +1879,12 @@ class calculate():
                 stopping =   PlasmonE**2 / velocity**2 * logDL
                 tmp =(PlasmonE**3 / velocity**2 * logDL) 
                 straggling = 0.25 * PlasmonE**2 / velocity**2 * (q_max_DL**2 - q_min_DL**2) + tmp 
-                    
-         
-    
-                    
             else:
                 Lambda = 0.0 
                 PlasmonE = 0.0 
                 stopping=0.0
                 straggling = 0.0      
             
-
             self.Result1[i] = PlasmonE * cnst.HARTREE
             self.Result2[i] = Lambda  * cnst.BOHR
             self.Result3[i] = stopping  * cnst.HARTREE /cnst.BOHR
@@ -2193,8 +2080,6 @@ class calculate():
             # self.Result2[i] = StragglingResult2[i]
             # E = E * Beam_incr
 
-
-
     def REELS_spectrum(self):
         Start_REELS = -5.0  # hard coded to start at -5
         NREELS = (int((self.UpperELimit - Start_REELS) / self.Stepsize) + 1)  # hard coded to start at -5
@@ -2224,8 +2109,6 @@ class calculate():
     
         
     def get_df_properties(self):  
-        # if  not self.initialized:
-            # return
     
         self.SumAi = 0.0
         SumGOS = 0.0

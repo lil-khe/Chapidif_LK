@@ -2367,12 +2367,12 @@ double DDCS_incl_retardation(double omega, double theta)
     }
     
 
-    double lossfunction_inclGOS_atE(double *p,  double omega, int modelchoice)
+    double Lossfunction_inclGOS_atE(npArray ParameterArray,  double omega, int modelchoice)
     {
         double  GOS,KanekoLoss, Loss_at_E;
         dcomp eps,oneovereps;
        
-        copyP_to_Vars(p, modelchoice);  
+        copyP_to_Vars(ParameterArray.data(), modelchoice);  
  
         w_global = omega/Hartree;
         eps=calculate_eps_osc(0.01);
@@ -3078,7 +3078,7 @@ void cumulative_trapezoid(const npArray y_array,const  npArray x_array, npArray 
 };
 
 void test(){
-    printf("nanobind seems correctly installed\n");
+    printf("nanobind seems correctly installed!\n");
         std::cout << "The C library was compiled by: ";
 
 #if defined(__clang__)
@@ -3119,5 +3119,6 @@ NB_MODULE(epslib, m) {
     m.def("TL_an_SumRule", &TL_an_SumRule, "calculate sum rule for Tauc_analytic DF"); 
     m.def("TaucSumRule", &TaucSumRule, "calculate sum rule for Tauc DF");
     m.def("DIIMFP_variable_step",&DIIMFP_variable_step,"calculate DIIMFP with, if required, variable step size");
+    m.def("Lossfunction_inclGOS_atE", &Lossfunction_inclGOS_atE, "calculate loss function at single omega value");
    // m.def("cumulative_trapezoid",cumulative_trapezoid,"modifiied cumulative trapezoid integration");
 }

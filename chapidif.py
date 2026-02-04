@@ -1,5 +1,6 @@
 
 import os
+
 import sys
 import webbrowser as browser
 #from functools import partial
@@ -26,7 +27,19 @@ class myWindow(QMainWindow):
         self.setWindowTitle("Chapidif, PyQt6, nanobind version (Jan. 2026)")
         self.MainWindowWidth=1130
         self.MainWindowHeight=800
-        
+        app.setStyleSheet("""
+            QGroupBox {
+                border: 2px solid blue;
+                border-radius: 5px;
+                margin-top: 1ex; /* leave space for the title */
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top center; /* centers all group box titles */
+                padding: 0 3px;
+                color: red;
+            }
+        """)
         screensize = QGuiApplication.primaryScreen().geometry()
         self.setGeometry(QRect(screensize.width()-self.MainWindowWidth,20,self.MainWindowWidth,self.MainWindowHeight))
         self.centralWidget = QWidget()      
@@ -120,7 +133,7 @@ class myWindow(QMainWindow):
         OscBox.setGeometry(QRect(4,4, 315, 530))
         self.OscTable = QTableWidget(self.calc.maxOscillators,5,parent = OscBox)
         self.OscTable.setGeometry(QRect(7, 30, 300, 485))
-        self.OscTable.setColumnWidth(0,72)
+        self.OscTable.setColumnWidth(0,65)
         self.OscTable.setColumnWidth(1,50)
         self.OscTable.setColumnWidth(2,50)
         self.OscTable.setColumnWidth(3,35)
@@ -182,7 +195,7 @@ class myWindow(QMainWindow):
 #========================oscillator model related=================================            
     def ModelChoice_init(self):
         self.ModelChoiceBox = QGroupBox(parent=self.tab_1, title="Oscillator Model:")
-        self.ModelChoiceBox.setGeometry(QRect(4,540, 315,162))
+        self.ModelChoiceBox.setGeometry(QRect(4,537, 315,162))
         DFchoice = ("Extended Drude (+ U)","Drude-Lindhard (+ U)","Mermin (+ U)", "Vlasov","Tauc-Lorentz", "TL-analytic ","Tauc-Mermin", "Forouhi-Bloomer", "Brendel-Bormann", "Orosco-Coimbra") #tuples here (round brackets, as there is no need for them to change
         self.DFchoice_short = ("Drude","DL","Mermin",  "Vlasov","Tauc","TL_an","TL_Mermin","FB","BB","OC")
         self.rb_modelchoice = []
@@ -356,7 +369,7 @@ class myWindow(QMainWindow):
         self.GOSBox.setGeometry(QRect(325,4, 235, 363))
         
         self.GOSTable = QTableWidget(self.calc.maxGOS,4,parent = self.GOSBox)
-        self.GOSTable.setGeometry(QRect(10, 22, 210, 259))
+        self.GOSTable.setGeometry(QRect(10, 22, 210, 220))
         self.GOSTable.setHorizontalHeaderLabels(("Nₓ","Uₓ(eV)","10*n+l","Z"))
         
         self.GOSTable.setColumnWidth(0,32)
@@ -417,28 +430,28 @@ class myWindow(QMainWindow):
         self.Update_target_properties()   
                        
     def GOS_options_init(self):
-       
-        QLabel("<font color='red'>GOS options:",parent=self.GOSBox).setGeometry(QRect(5,284, 300,18))
+        ypos=250
+        QLabel("<font color='red'>GOS options:",parent=self.GOSBox).setGeometry(QRect(5,ypos, 300,18))
         
         self.PrecisionCheckbox = QCheckBox('precise (slow)', self.GOSBox)
         self.PrecisionCheckbox.setChecked(False)
-        self.PrecisionCheckbox.setGeometry(QRect(117,284, 110,18))
+        self.PrecisionCheckbox.setGeometry(QRect(117,ypos, 110,18))
         self.PrecisionCheckbox.stateChanged.connect(self.PrecisionCheckbox_state_changed)
         
         self.rb_GOSrescaling = []
         rb =QRadioButton("rescaling off", parent= self.GOSBox )
-        rb.setGeometry(QRect(5,300,100,40))
+        rb.setGeometry(QRect(5,ypos+12,100,40))
         rb.clicked.connect(self.rb_GOSrescaling_clicked)
         self.rb_GOSrescaling.append(rb)
         rb =QRadioButton("rescaling on", parent= self.GOSBox  )
-        rb.setGeometry(QRect(120,300,100,40))
+        rb.setGeometry(QRect(120,ypos+12,100,40))
         rb.clicked.connect(self.rb_GOSrescaling_clicked)
         self.rb_GOSrescaling.append(rb) 
       
-        QLabel("Max ω density correction (eV):",parent=self.GOSBox ).setGeometry(QRect(5,335, 210,18))
+        QLabel("Max ω density correction (eV):",parent=self.GOSBox ).setGeometry(QRect(5,ypos+45, 210,18))
         self.GOSDesityCor = QLineEdit(str(self.calc.maxEnergyDensityEffect),parent=self.GOSBox)
         self.GOSDesityCor.setValidator(QDoubleValidator(0.0, 1e9, 6))
-        self.GOSDesityCor.setGeometry(QRect(185,335, 40,18))
+        self.GOSDesityCor.setGeometry(QRect(185,ypos+45, 40,18))
         self.GOSDesityCor.editingFinished.connect(self.get_maxEnergyDensityEffect_from_lineEdit)  
          
     def  rb_GOSrescaling_clicked(self):
@@ -766,17 +779,17 @@ class myWindow(QMainWindow):
     
     def input_target_properties(self):
         TargetBox = QGroupBox(parent=self.tab_1, title="Target:")
-        TargetBox.setGeometry(QRect(895,4, 220,75)) 
-        QLabel("density (gr/cm³):",parent=TargetBox ).setGeometry(QRect(5,25, 125,20))
+        TargetBox.setGeometry(QRect(895,4, 220,71)) 
+        QLabel("density (gr/cm³):",parent=TargetBox ).setGeometry(QRect(5,20, 125,20))
         self.densinp= QLineEdit(str(self.calc.specificweight),parent=TargetBox)
         self.densinp.setValidator(QDoubleValidator(0.0, 1e9, 6))
-        self.densinp.setGeometry(QRect(130,25, 65,18))
+        self.densinp.setGeometry(QRect(130,20, 65,18))
         self.densinp.editingFinished.connect(self.UpdateDensity)
         
-        QLabel("molar weight (gr):",parent=TargetBox ).setGeometry(QRect(5,49, 125,20))
+        QLabel("molar weight (gr):",parent=TargetBox ).setGeometry(QRect(5,45, 125,20))
         self.molweight= QLineEdit(str(self.calc.massunitcell),parent=TargetBox)
         self.molweight.setValidator(QDoubleValidator(0.0, 1e9, 6))
-        self.molweight.setGeometry(QRect(130,49, 65,18))
+        self.molweight.setGeometry(QRect(130,45, 65,18))
         self.molweight.editingFinished.connect(self.Updatemolweight)
         
     def UpdateDensity(self):
@@ -804,11 +817,11 @@ class myWindow(QMainWindow):
         
     def init_DF_comment(self):
         self.DF_commentBox = QGroupBox(parent=self.tab_1, title="DF comment ")
-        self.DF_commentBox.setGeometry(QRect(325,650, 562,50)) 
+        self.DF_commentBox.setGeometry(QRect(325,650, 562,47)) 
         self.DF_filename = QLabel(self.readwrite.fname,parent=self.DF_commentBox )
         self.DF_filename.setGeometry(QRect(90,2, 400,20))
         self.DF_comment_input= QLineEdit(str(self.readwrite.DF_comment),parent=self.DF_commentBox)
-        self.DF_comment_input.setGeometry(QRect(5,25, 540,18))
+        self.DF_comment_input.setGeometry(QRect(5,20, 540,18))
         self.DF_comment_input.editingFinished.connect(self.update_DFcomment)
         
     def show_DFcomment(self):
@@ -820,17 +833,37 @@ class myWindow(QMainWindow):
     def transform_df(self):
         xpos=5
         ypos=0
-        deltay=26
+        deltay=25
         boxwidth=220
         self.Transform_DF_Box = QGroupBox(parent=self.tab_1,title="DF transformations")
         self.Transform_DF_Box.setGeometry(QRect(895,430,boxwidth,220))  
         ypos+= deltay-5
-        QLabel("using" ,parent=self.Transform_DF_Box).setGeometry(QRect(xpos,ypos,100,18))  
-        self.N_osc_inp = QLineEdit(str(self.calc.N_oscillator_used),parent= self.Transform_DF_Box ) 
-        self.N_osc_inp.setValidator(QIntValidator(1,self.calc.maxOscillators))
-        self.N_osc_inp.setGeometry(QRect(45,ypos, 30,18))  
-        self.N_osc_inp.editingFinished.connect(self.Update_N_osc_used)
-        QLabel("oscillators" ,parent=self.Transform_DF_Box).setGeometry(QRect(xpos+75,ypos,120,18))  
+        self.Change_DF_model = QPushButton( self.Transform_DF_Box) 
+        
+        self.PENN_Transfrom = QPushButton("'Penn'", self.Transform_DF_Box)  
+        self.PENN_Transfrom.setGeometry(QRect(xpos,ypos, 50,23))
+        self.PENN_Transfrom.clicked.connect(self.calc.Penn_from_ELF)   
+
+        self.Change_DF_model.setText("Memin to Drude")
+        self.Change_DF_model.setGeometry(QRect(xpos+100,ypos, 110,22))
+        self.Change_DF_model.clicked.connect(self.calc.convert_DF)  
+        self.Change_DF_model.setVisible(True)
+        
+        
+        
+        ypos+=  deltay
+        self.drawHLine(ypos,self.Transform_DF_Box)
+        ypos+= +5
+        QLabel("using Oscillator" ,parent=self.Transform_DF_Box).setGeometry(QRect(xpos,ypos,100,18))  
+        self.first_osc_used = QLineEdit(str(self.calc.First_oscillator_transform+1),parent= self.Transform_DF_Box ) 
+        self.first_osc_used.setValidator(QIntValidator(1,self.calc.maxOscillators))
+        self.first_osc_used.setGeometry(QRect(100,ypos, 25,18))  
+        self.first_osc_used.editingFinished.connect(self.Update_first_osc_used)
+        QLabel("to" ,parent=self.Transform_DF_Box).setGeometry(QRect(xpos+130,ypos,120,18))  
+        self.last_osc_used = QLineEdit(str(self.calc.Last_oscillator_transform+1),parent= self.Transform_DF_Box ) 
+        self.last_osc_used.setValidator(QIntValidator(1,self.calc.maxOscillators))
+        self.last_osc_used.setGeometry(QRect(160,ypos, 25,18))  
+        self.last_osc_used.editingFinished.connect(self.Update_last_osc_used)
         
         ypos+= deltay
         self.DF_from_OOS = QPushButton("DF from OOS", self.Transform_DF_Box)  
@@ -838,22 +871,12 @@ class myWindow(QMainWindow):
         self.DF_from_OOS.clicked.connect(self.readwrite.DF_from_OOS)    
         
    
-        self.PENN_Transfrom = QPushButton("'Penn'", self.Transform_DF_Box)  
-        self.PENN_Transfrom.setGeometry(QRect(xpos+120,ypos, 50,23))
-        self.PENN_Transfrom.clicked.connect(self.calc.Penn_from_ELF)   
+      
         
         ypos +=deltay
         self.drawHLine(ypos,self.Transform_DF_Box)
         ypos+= +5
-        self.Change_DF_model = QPushButton( self.Transform_DF_Box) 
-
-        self.Change_DF_model.setText("Memin to Drude")
-        self.Change_DF_model.setGeometry(QRect(xpos,ypos, 110,22))
-        self.Change_DF_model.clicked.connect(self.calc.convert_DF)  
-        self.Change_DF_model.setVisible(True)
-        ypos+=  deltay
-        self.drawHLine(ypos,self.Transform_DF_Box)
-        ypos+= +5
+       
         self.Change_U = QPushButton( self.Transform_DF_Box)  
         self.Change_U.setText("change U")
         self.Change_U.setGeometry(QRect(xpos,ypos, 90,22))
@@ -890,7 +913,8 @@ class myWindow(QMainWindow):
         
         
   
-    def Update_N_osc_used(self):self.calc.N_oscillator_used = int(self.N_osc_inp.text())
+    def Update_first_osc_used(self):self.calc.First_oscillator_transform = int(self.first_osc_used.text())-1  # first oscillator is at index 0
+    def Update_last_osc_used(self):self.calc.Last_oscillator_transform = int(self.last_osc_used.text())-1  # first oscillator is at index 0
    
     def Update_l_Kaneko_transform(self):self.calc.l_Kaneko_transform = int(self.l_inp.text())
     def Update_Q_Kaneko_transform(self):self.calc.Q_Kaneko_transform = float(self.Q_inp.text())     
@@ -903,7 +927,7 @@ class myWindow(QMainWindow):
 #-main start calculationbox
     def calculate_which_property(self):
         self.CalculationChoiseBox = QGroupBox(parent=self.tab_2,title="Calculatiobn Choice:")
-        self.CalculationChoiseBox.setGeometry(QRect(4,4,430,700))
+        self.CalculationChoiseBox.setGeometry(QRect(4,4,430,695))
         self.CalcChoice=[]
         self.yCoord=[]
         self.CalcChoice.append({"desc": "<font color='red'>Dielectric Function:", "subroutine_called":"label", "pos": 7})
@@ -926,8 +950,8 @@ class myWindow(QMainWindow):
         self.CalcChoice.append({"desc": "Mean excitation energy", "subroutine_called":"Mean_Excitation_Energy", "pos": 0})
         self.CalcChoice.append({"desc": "S(q,ω) and its sum rule", "subroutine_called":"S_k_omega_rule", "pos": 0})
         self.CalcChoice.append({"desc": "Compton profile at q=            a.u.", "subroutine_called":"Compton", "pos": 0})
-        self.CalcChoice.append({"desc": "Fresnel refl. coef., ℏω=          eV", "subroutine_called":"Fresnel", "pos": 0})
-        self.CalcChoice.append({"desc": "(Ellipsometry) Δ, Ψ at ϕ=          °", "subroutine_called":"DeltaPsi", "pos": 0})
+        self.CalcChoice.append({"desc": "Fresnel refl. coef., ℏω=          eV", "subroutine_called":"Fresnel_at_E", "pos": 0})
+        self.CalcChoice.append({"desc": "Fresnel refl. coef., ϕ=             °", "subroutine_called":"Fresnel_at_angle", "pos": 0})
         self.CalcChoice.append({"desc": "X-ray mass absorption coef.", "subroutine_called":"xray_absorption", "pos": 0})
         self.CalcChoice.append({"desc": "<font color='red'>Local density approx.:", "subroutine_called":"label", "pos": 5})
         self.CalcChoice.append({"desc": "pseudo charge-density", "subroutine_called":"pseudo_charge_density", "pos": 0})
@@ -959,7 +983,7 @@ class myWindow(QMainWindow):
         xpos=5
         self.x_2nd_column=217
         ypos=25
-        deltay=26
+        deltay=25
         self.rb_calculation_Choice = []
         for i in range(len(self.CalcChoice)):
             if(self.CalcChoice[i]["subroutine_called"] == "label"):
@@ -1000,7 +1024,7 @@ class myWindow(QMainWindow):
     def UpdateQ_Compton(self): self.calc.q_Compton=float(self.q_compton_inp.text())      
 
     def LineEdit_E_Fresnel(self):
-        index= self.CalcChoice.index(next(filter(lambda n: n.get('subroutine_called') == "Fresnel", self.CalcChoice)))
+        index= self.CalcChoice.index(next(filter(lambda n: n.get('subroutine_called') == "Fresnel_at_E", self.CalcChoice)))
         self.E_Fresnel_inp = QLineEdit(str(self.calc.E_Fresnel),parent= self.CalculationChoiseBox) 
         self.E_Fresnel_inp.setValidator(QDoubleValidator(0.0, 1e9, 6))
         self.E_Fresnel_inp.setGeometry(QRect(158,self.yCoord[index], 30,18))  
@@ -1009,10 +1033,10 @@ class myWindow(QMainWindow):
     def UpdateE_Fresnel(self): self.calc.E_Fresnel=float(self.E_Fresnel_inp.text()) 
      
     def LineEdit_phi_ellipsometry(self):
-        index= self.CalcChoice.index(next(filter(lambda n: n.get('subroutine_called') == "DeltaPsi", self.CalcChoice)))
+        index= self.CalcChoice.index(next(filter(lambda n: n.get('subroutine_called') == "Fresnel_at_angle", self.CalcChoice)))
         self.phi_ellipsometry_inp = QLineEdit(str(self.calc.phi_ellipsometry),parent= self.CalculationChoiseBox) 
         self.phi_ellipsometry_inp.setValidator(QDoubleValidator(0, 90.0, 6))
-        self.phi_ellipsometry_inp.setGeometry(QRect(173,self.yCoord[index], 35,18))  
+        self.phi_ellipsometry_inp.setGeometry(QRect(158,self.yCoord[index], 30,18))  
         self.phi_ellipsometry_inp.editingFinished.connect(self.Update_phi_ellipsometry)        
    
     def Update_phi_ellipsometry(self): self.calc.phi_ellipsometry=float(self.phi_ellipsometry_inp.text())  
@@ -1039,30 +1063,31 @@ class myWindow(QMainWindow):
 #-----------------------------plot option boxes-------------------------------------
     def  PlotOptions(self):
         xpos=5
-        ypos=2
-        deltay=27
-        self.PlotOptionBox = QGroupBox(parent=self.tab_2,title="Energy plots:")
+        ypos=17
+        deltay=25
+        self.PlotOptionBox = QGroupBox(parent=self.tab_2,title="Plot Options:")
         self.PlotOptionBox.setGeometry(QRect(440,4,320,305))
+        QLabel("<font color='red'>Energy plots:",parent=self.PlotOptionBox).setGeometry(QRect(xpos,ypos, 300,18))
         QLabel("at q=               a.u.",parent=self.PlotOptionBox).setGeometry(QRect(xpos+130,ypos, 300,18))        
         self.q_Eplot_inp = QLineEdit(str(self.calc.q),parent= self.PlotOptionBox ) 
         self.q_Eplot_inp.setValidator(QDoubleValidator(0.0, 1e9, 6))
-        self.q_Eplot_inp.setGeometry(QRect(xpos+170,ypos, 40,17))  
+        self.q_Eplot_inp.setGeometry(QRect(xpos+130+32,ypos, 45,17))  
         self.q_Eplot_inp.editingFinished.connect(self.Update_q_Eplot)
            
         ypos+=deltay
         QLabel("from ",parent=self.PlotOptionBox).setGeometry(QRect(xpos,ypos, 50,18))
-        QLabel("eV, to ",parent=self.PlotOptionBox).setGeometry(QRect(xpos+85,ypos, 50,18))
+        QLabel("eV to ",parent=self.PlotOptionBox).setGeometry(QRect(xpos+85,ypos, 50,18))
         QLabel("eV,  step",parent=self.PlotOptionBox).setGeometry(QRect(xpos+170,ypos, 50,18))
         QLabel("eV",parent=self.PlotOptionBox).setGeometry(QRect(xpos+270,ypos, 50,18))
         
         self.LowerElim_inp = QLineEdit(str(self.calc.LowerELimit),parent= self.PlotOptionBox ) 
         self.LowerElim_inp.setValidator(QDoubleValidator(0.0, 1e9, 6))
-        self.LowerElim_inp.setGeometry(QRect(xpos+40,ypos, 40,18))  
+        self.LowerElim_inp.setGeometry(QRect(xpos+32,ypos, 45,18))  
         self.LowerElim_inp.editingFinished.connect(self.UpdateLowerElim)   
         
         self.UpperElim_inp = QLineEdit(str(self.calc.UpperELimit),parent= self.PlotOptionBox ) 
         self.UpperElim_inp.setValidator(QDoubleValidator(0.0, 1e9, 6))
-        self.UpperElim_inp.setGeometry(QRect(xpos+125,ypos, 40,18))  
+        self.UpperElim_inp.setGeometry(QRect(xpos+125,ypos, 45,18))  
         self.UpperElim_inp.editingFinished.connect(self.UpdateUpperElim)  
         
         self.StepSize_inp = QLineEdit(str(self.calc.Stepsize),parent= self.PlotOptionBox ) 
@@ -1077,7 +1102,7 @@ class myWindow(QMainWindow):
         QLabel("at ω=               eV",parent=self.PlotOptionBox).setGeometry(QRect(xpos+130,ypos, 300,18))
         self.omega_qplot_inp = QLineEdit(str(self.calc.Energy_qplot ),parent= self.PlotOptionBox ) 
         self.omega_qplot_inp.setValidator(QDoubleValidator(0.0, 1e9, 6))
-        self.omega_qplot_inp.setGeometry(QRect(xpos+170,ypos, 40,18))  
+        self.omega_qplot_inp.setGeometry(QRect(xpos+162,ypos, 45,18))  
         self.omega_qplot_inp.editingFinished.connect(self.Update_omega_qplot)  
         
         ypos+=deltay
@@ -1203,14 +1228,14 @@ class myWindow(QMainWindow):
                          
     def REELSOptions(self):
         xpos=5
-        ypos=2
-        deltay=26
+        ypos=17
+        deltay=25
         self.REELSOptionBox = QGroupBox(parent=self.tab_2,title="(R)EELS parameters:")
         self.REELSOptionBox.setGeometry(QRect(440,315,320,220))  
-        QLabel("Energy res. (eV):",parent=self.REELSOptionBox).setGeometry(QRect(170,ypos, 1200,18))      
+        QLabel("Energy res. (eV):",parent=self.REELSOptionBox).setGeometry(QRect(xpos,ypos, 1200,18))      
         self.Eres_inp = QLineEdit(str(self.calc.Eres),parent= self.REELSOptionBox ) 
         self.Eres_inp.setValidator(QDoubleValidator(0, 1e9, 6))
-        self.Eres_inp.setGeometry(QRect(280,ypos, 30,18))  
+        self.Eres_inp.setGeometry(QRect(xpos+110,ypos, 30,18))  
         self.Eres_inp.editingFinished.connect(self.UpdateEres)
         
         ypos+=deltay
@@ -1331,7 +1356,7 @@ class myWindow(QMainWindow):
         ypos=25
         deltay=26
         self.ComparisonBox = QGroupBox(parent=self.tab_2,title="Compare with Literature")   
-        self.ComparisonBox.setGeometry(QRect(440,540,320,162)) 
+        self.ComparisonBox.setGeometry(QRect(440,540,320,159)) 
         self.CompPlotBtn = QPushButton("Load comp. data",parent=self.ComparisonBox ) 
         self.CompPlotBtn.setGeometry(xpos,ypos,120,25)
         self.CompPlotBtn.clicked.connect(self.readwrite.load_comp_data) 
@@ -1368,7 +1393,7 @@ class myWindow(QMainWindow):
     def  Projectile_target_Interaction(self):
         xpos=5
         ypos=27
-        deltay=26
+        deltay=25
         self.ProjectileBox = QGroupBox(parent=self.tab_2,title="Projectile-Target interactions")
         self.ProjectileBox.setGeometry(QRect(770,4,350,440))   
         
@@ -1588,7 +1613,7 @@ class myWindow(QMainWindow):
         ypos=30
         deltay=25
         self.CalculationOptionBox = QGroupBox(parent=self.tab_3,title="Calculation options")
-        self.CalculationOptionBox.setGeometry(QRect(4,4,430,700)) 
+        self.CalculationOptionBox.setGeometry(QRect(4,4,430,695)) 
               
         QLabel("maximum number of ω values considered ",parent=self.CalculationOptionBox).setGeometry(QRect(xpos,ypos,300,18))
         self.NMaxEnergyStepsInput = QLineEdit(str(self.calc.MaxNPoints),parent= self.CalculationOptionBox )  
@@ -1644,7 +1669,7 @@ class myWindow(QMainWindow):
         ypos=30
         deltay=25
         self.PlotOptionBox = QGroupBox(parent=self.tab_3,title="Plot options")
-        self.PlotOptionBox.setGeometry(QRect(445,4,430,700)) 
+        self.PlotOptionBox.setGeometry(QRect(445,4,430,696)) 
         # self.LatexModeCheckbox = QCheckBox('use Latex mode', self.PlotOptionBox )  # discarded, too many problems for little gain
         # self.LatexModeCheckbox.setChecked(self.runplot.LaTeXlike)
         # self.LatexModeCheckbox.setGeometry(QRect(xpos,ypos, 150,18))
@@ -1758,9 +1783,10 @@ ctrl+c, cmd+c:\t copy figure to clipboard     """
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     def MainWindowIO(self):
         self.CalcPlotBtn = QPushButton("calculate and plot",parent=self.centralWidget) 
+        self.CalcPlotBtn.setStyleSheet("border: 2px solid red;")
         self.CalcPlotBtn.setObjectName("cpbtn") 
         self.CalcPlotBtn.setGeometry(self.MainWindowWidth-330,self.MainWindowHeight-60,130,30)  
-        self.CalcPlotBtn.setStyleSheet("#cpbtn {font: bold;} #cpbtn{ background-color: yellow; }")
+        
         self.CalcPlotBtn.clicked.connect(self.runplot.start_calc_and_plot)  
 
         self.ReplotBtn = QPushButton("replot",parent=self.centralWidget)     
@@ -1852,10 +1878,11 @@ ctrl+c, cmd+c:\t copy figure to clipboard     """
                  
 if __name__ == "__main__":
     # Create the application
+  
     app = QApplication(sys.argv)
-    app.setStyle('Windows') 
-    with open("ChapidifStyle.qss","r") as fh:
-        app.setStyleSheet(fh.read())
+    app.setStyle('Fusion') # was 'Windows'
+    # with open("ChapidifStyle.qss","r") as fh:
+        # app.setStyleSheet(fh.read())
     # Create and show the main window
     win = myWindow()
     win.show()

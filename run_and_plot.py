@@ -67,20 +67,6 @@ class run_and_plot:
         self.update_plot_settings() 
         plotchoice=self.MyChapApp.plotchoice
         if plotchoice == "IMFP_stop_strag":
-            if self.x_axis_keV:
-                self.xlabel = self.calc.particle + " energy (keV)"
-            else:
-                self.xlabel = self.calc.particle +" velocity (a.u.)"
-            if self.StoppingUnits==0:
-                self.Text_label[1] = r"stopping (eV/$\rm{\AA}$)"
-                self.StoppingFactor=1.0
-            elif self.StoppingUnits==1:
-                self.Text_label[1] = "stopping (eV / (1E¹⁵ atoms/cm²)) "
-                self.StoppingFactor=self.calc.massunitcell/(self.calc.specificweight*6.022)
-            elif self.StoppingUnits==2:
-                self.Text_label[1] = "stopping (MeV / (mg/cm²))"    
-                self.StoppingFactor=0.1/self.calc.specificweight
-            self.prepare_for_writing_plotting()    
             self.plot_result3()
         elif plotchoice == "eq_plot"  or  plotchoice == "self_eq_plot"  or plotchoice == "dcs_omega_eq_plot"\
             or  plotchoice == "dcs_omega_eq_plot" or  plotchoice =="Cerenkov" or  plotchoice == "difference_due_to_Cerenkov":
@@ -88,26 +74,9 @@ class run_and_plot:
                 self.colorplot_result() 
         elif plotchoice == "partial_DIIMFP" or plotchoice == "partial_stopping":   
             self.plot_result10()
-        elif plotchoice == "diimfp" or plotchoice == "Compton"  or plotchoice =="calc_projectile_range" \
-            or plotchoice == "dyn_struct_factor" or plotchoice == "pseudo_charge_density" or plotchoice == "REELS"\
-            or plotchoice =="radial_charge_density" or plotchoice == "DDCS_at_omega" or plotchoice== "bin_enc_peak" or plotchoice == "oscillator_strength":
-            self.plot_result1()   
-        elif plotchoice == "eps_w_kk" or plotchoice == "one_over_eps_w_kk" \
-            or plotchoice == "radial_w_p_lambda" or plotchoice == "shell_effect_all":
-            self.plot_result4()
-        elif plotchoice == "SELF_DSEP" or plotchoice == "S_k_omega_rule":
-            self.plot_result2_dif_y_axes()
-        elif plotchoice == "sum_rules":
-            self.plot_resultSumrules() 
         else:
-            self.plot_result2()
+            self.plot_graph()
                       
-   
-        
-     
-            
-            
-       
 #-----------------------------------------------------------------------    
     def initcalc(self):
         self.calc.ErrorMessage = "no errors"
@@ -117,9 +86,12 @@ class run_and_plot:
             self.particle_LaTeX ="e⁻"  
   
         self.ylabel = ""
+        self.ylabel2 =""
         self.PlotDescription = ""
         self.LaTex_label = ["","","",""]
         self.Text_label =  ["","","",""]
+        self.second_y=[False,False,False,False]
+       
         self.calc.my_updateProjectileEnergy()
         
         self.update_plot_settings()
@@ -155,7 +127,7 @@ class run_and_plot:
         self.nl="\n "  #here python makes the newline so no raw    
         plt.rcParams['mathtext.fontset'] = 'stix'
         self.cm=1.0/2.54  
-        self.px_per_cm= matplotlib.rcParams['figure.dpi']*self.cm
+        self.px_per_cm= 100*self.cm
         plt.rcParams["figure.figsize"] = [self.figurewidth,self.figureheight] 
  
         self.dx = int(self.figurewidth*self.px_per_cm)  # in pixels
@@ -170,39 +142,30 @@ class run_and_plot:
     def eps_w(self):
         self.calc.eps1eps2()
         self.xlabel =  "ω (eV)"
+        self.omega_xaxis = True
         if self.calc.epsilon_chi_choice == 0:
-            # self.LaTex_label[0] =  r"$\mathrm{Re} \left[\epsilon (ω, q= %s)\right]$" %str(self.calc.q)
-            # self.LaTex_label[1] =  r"$\mathrm{Im} \left[\epsilon (ω, q= %s)\right]$" %str(self.calc.q)
             self.Text_label[0] = "Re[ε(ω,q=%s)]" %str(self.calc.q)
             self.Text_label[1] = "Im[ε(ω,q=%s)]" %str(self.calc.q)
         else:
-            for i in range(self.calc.NPoints): self.calc.Result1[i] -= 1
-            # self.LaTex_label[0] =  r"$\mathrm{Re} \left[\chi (ω, q= %s)\right]$" %str(self.calc.q)
-            # self.LaTex_label[1] =  r"$\mathrm{Im} \left[\chi (ω, q= %s)\right]$" %str(self.calc.q)
+            self.calc.Result1 -= 1
             self.Text_label[0] = "Re[χ(ω,q=%s)]" %str(self.calc.q)
             self.Text_label[1] = "Im[χ(ω,q=%s)]" %str(self.calc.q)
-            
         self.PlotDescription =  ""
-        self.plot_result2()
+        self.plot_graph()
         
     def one_over_eps_w(self):  
         self.calc.oneovereps1eps2()
-        self.xlabel ="ω (eV)"
+        self.xlabel = "ω (eV)"
         if self.calc.epsilon_chi_choice == 0:
-            # self.LaTex_label[0] = r"$\mathrm{Re} \left[{\frac{1}{\epsilon (ω, q= %s)}}\right]$" %str(self.calc.q)
-            # self.LaTex_label[1] = r"$\mathrm{Im}\left[\frac{-1}{\epsilon (ω, q= %s)}\right]$" %str(self.calc.q)
             self.Text_label[0] = "Re[1/ε(ω,q=%s)]" %str(self.calc.q)
             self.Text_label[1] = "Im[-1/ε(ω,q=%s)]" %str(self.calc.q)
             
         else:
             for i in range(self.calc.NPoints): self.calc.Result1[i] -= 1
-            # self.LaTex_label[0] = r"$\mathrm{Re} \left[{\frac{1}{\epsilon (ω, q= %s)}}\right]-1$" %str(self.calc.q)
-            # self.LaTex_label[1] = r"$\mathrm{Im}\left[\frac{-1}{\epsilon(ω, q= %s)}\right]$" %str(self.calc.q)
             self.Text_label[0] = "Re[1/χ(ω,q=%s)]" %str(self.calc.q)
             self.Text_label[1] = "Im[-1/χ(ω,q=%s)]" %str(self.calc.q)
-            
         self.PlotDescription = ""
-        self.plot_result2()  
+        self.plot_graph() 
         
     def eps_q(self): 
         self.calc.eps1eps2_q()
@@ -220,8 +183,8 @@ class run_and_plot:
             self.Text_label[1] = "Im[χ(ω=%s,q)]" %str(self.calc.Energy_qplot)
             
         self.ylabel = ""
-        self.PlotDescription = r""
-        self.plot_result2()     
+        self.PlotDescription = ""
+        self.plot_graph()      
         
     def one_over_eps_q(self):   
         self.calc.oneovereps1eps2_q()
@@ -240,7 +203,7 @@ class run_and_plot:
             
         self.ylabel = ""
         self.PlotDescription = ""
-        self.plot_result2() 
+        self.plot_graph() 
         
     def eps_w_kk(self):   
         error=self.calc.eps_kk_test()
@@ -255,7 +218,7 @@ class run_and_plot:
         self.Text_label[2]= "KK-transform Im[ε(ω,q=%s)]" %str(self.calc.q)
         self.Text_label[3]= "KK-transform Re[ε(ω,q=%s)]" %str(self.calc.q)
         self.PlotDescription = ""
-        self.plot_result4()   
+        self.plot_graph()  
         
     def one_over_eps_w_kk(self):   
         error=self.calc.one_over_eps_kk_test()
@@ -307,7 +270,7 @@ class run_and_plot:
         self.Text_label[0] = "n(ω,q=%s)]" %str(self.calc.q)
         self.Text_label[1] = "k(ω,q=%s)]" %str(self.calc.q)
         self.PlotDescription = ""
-        self.plot_result2()   
+        self.plot_graph()   
         
     def sum_rules(self):  
         self.calc.sum_rules()
@@ -322,8 +285,10 @@ class run_and_plot:
         self.Text_label[2] ="sum rule for k, q = %s"  %str(self.calc.q)  
         self.Text_label[3] ="KK (perfect screening) sum rule , q = %s"  %str(self.calc.q)  
         self.ylabel = "electrons per unit cell "
+        self.ylabel2 = "KK sum rule"
         self.PlotDescription = ""
-        self.plot_resultSumrules()  
+        self.second_y[3] = True
+        self.plot_graph()  
         
         
     def inertial_rules(self):  
@@ -341,7 +306,7 @@ class run_and_plot:
  
         self.ylabel = r"inertial sum rule (eV$^{-1})$ "
         self.PlotDescription = "evaluated at q={} a.u.".format(self.calc.q)
-        self.plot_result2()      
+        self.plot_graph()      
         
     def diimfp(self):    
         self.calc.calcDIIMFP()
@@ -353,37 +318,23 @@ class run_and_plot:
         #self.PlotDescription = r"IMFP: {:.1g}$ \rm{\AA}$".format(float(self.calc.StoppingResultArray[0]))
         self.PlotDescription +=r", stopping:  {:.3g} eV/Å".format(float(self.calc.StoppingResultArray[1]))
         self.PlotDescription +=  r", straggling: {:.3g} eV$^2$/Å".format(float(self.calc.StoppingResultArray[2]))
-        self.plot_result1()
+        self.plot_graph()
         
     def IMFP_stop_strag(self): 
         
         self.calc.calccurves(False)
-        if self.x_axis_keV:
-            self.xlabel = self.calc.particle + " energy (keV)"
-        else:
-            self.xlabel = self.calc.particle +" velocity (a.u.)"
-        if self.plot_imfp:
-            self.Text_label[0] = "IMFP (Å)"
-        else:
-            self.Text_label[0] = "σ (Å²)" 
-        if self.StoppingUnits==0:
-            self.Text_label[1] = "stopping (eV/Å)"
-            self.StoppingFactor=1.0
-        elif self.StoppingUnits==1:
-            self.Text_label[1] = "stopping (eV / (1E¹⁵atoms/cm²))"
-            self.StoppingFactor=self.calc.massunitcell/(self.calc.specificweight*6.022)
-        elif self.StoppingUnits==2:
-            self.Text_label[1] = "stopping (MeV/(mg/cm²))"    
-            self.StoppingFactor=0.1/self.calc.specificweight
-        self.Text_label[2] = "straggling (eV²/Å)"
-        self.prepare_for_writing_plotting()
+ 
+
+    #    self.prepare_for_writing_plotting()
         self.plot_result3() 
         
     def prepare_for_writing_plotting(self):
-        if self.x_axis_keV:
-            self.calc.x_axis = self.calc.CurvesEnergy
-        else:
-            self.calc.x_axis = self.calc.CurvesVelocity    
+        # if self.x_axis_keV:
+            # self.calc.x_axis = self.calc.CurvesEnergy
+            # self.xlabel = self.calc.particle + " energy (keV)"
+        # else:
+            # self.calc.x_axis = self.calc.CurvesVelocity  
+            # self.xlabel = self.calc.particle +" velocity (a.u.)"  
         for i in range(len(self.calc.x_LinearApprox_lowE)-1):
             self.calc.x_LinearApprox_lowE[i+1]=self.calc.CurvesEnergy[i]
         if self.plot_imfp:
@@ -423,18 +374,19 @@ class run_and_plot:
         self.Text_label[1]="mean ionization energy for stopping" 
         self.ylabel = "Mean Ionization Energy (eV)"
         self.PlotDescription = ""
-        self.plot_result2() 
+        self.plot_graph() 
     
     def SELF_DSEP(self):
         self.calc.surfaceloss()
         self.xlabel =self.calc.particle + " energy loss(eV)"
         self.Text_label[0] = "surf Loss Func"
-        self.Text_label[1] =  "DSEP, θ={:.1f}^∘".format(self.calc.thetaIn)+"integr.prob.:{:.3g}".format(
+        self.Text_label[1] =  "DSEP, θ={:.1f}⁰, ".format(self.calc.thetaIn)+"integr.prob.:{:.3g}".format(
             self.calc.SurfExProb) 
         self.PlotDescription = "SELF evaluated at q={} a.u.".format( self.calc.q)
         self.ylabel  = "Surf. loss function "
         self.ylabel2 = "DSEP at E₀={:.1f}".format(self.calc.E0)+"keV"
-        self.plot_result2_dif_y_axes()
+        self.second_y[1] = True
+        self.plot_graph()
         
     def Compton(self):  
         self.calc.CalcCompton()
@@ -442,27 +394,33 @@ class run_and_plot:
         self.Text_label[0] =  "Compton profile \nq=%s a.u."%str(self.calc.q_Compton) 
         self.PlotDescription = ""
         self.ylabel = "electrons per a.u. per atom"
-        self.plot_result1()  
+        self.plot_graph()  
      
-    def Fresnel(self):
-        self.calc.CalcFresnel()   
+    def Fresnel_at_E(self):
+        self.calc.Fresnel_at_E()   
         self.xlabel = "angle (deg.)"
         self.Text_label[0] = "Rₛ"
         self.Text_label[1] = "Rₚ"
+        self.second_y[2] = True
         self.Text_label[2] = "Ψ"
         self.Text_label[3] = "Δ"
         self.PlotDescription = "Fresnel coefficients ℏω= {:.2f} eV ({:.3g} μm)".format(self.calc.E_Fresnel,1.2389841/self.calc.E_Fresnel)
-        self.ylabel = "Reflectance "
-        self.plot_result4()  
+        self.ylabel = "Reflectance Rₛ, Rₚ"
+        self.ylabel2 = "Ψ, Δ (⁰)"
+        self.plot_graph()  
     
-    def DeltaPsi(self):
-        self.calc.DeltaPsi()   
+    def Fresnel_at_angle(self):
+        self.calc.Fresnel_at_angle()   
         self.xlabel = "ω (eV)"
-        self.Text_label[0] = "Δ"
-        self.Text_label[1] = "Ψ"
-        self.PlotDescription = "ellipsometry at ϕ={:.2f}°".format(self.calc.phi_ellipsometry)
-        self.ylabel = ""  
-        self.plot_result2()    
+        self.Text_label[0] = "Rₛ"
+        self.Text_label[1] = "Rₚ"
+        self.second_y[2] = True
+        self.Text_label[2] = "Ψ"
+        self.Text_label[3] = "Δ"
+        self.PlotDescription = "Fresnel coeff. at ϕ={:.2f}°".format(self.calc.phi_ellipsometry)
+        self.ylabel = "Reflectance Rₛ, Rₚ"
+        self.ylabel2 = "Δ, Ψ (⁰)"  
+        self.plot_graph()    
         
         
     def xray_absorption(self):
@@ -471,7 +429,7 @@ class run_and_plot:
         self.xlabel = "photon energy (eV)" 
         self.Text_label[0] = "μ (cm²/g)"
         self.PlotDescription = "Photon absorption coefficient"
-        self.plot_result1()
+        self.plot_graph()
         
     def partial_DIIMFP(self):
         self.calc.weight = 0.0
@@ -495,7 +453,7 @@ class run_and_plot:
         
         self.PlotDescription = "evaluated at q={} a.u.".format( self.calc.q)
         self.ylabel = "eV⁻¹"
-        self.plot_result1()
+        self.plot_graph()
         
         
     def S_k_omega_rule(self):
@@ -507,7 +465,8 @@ class run_and_plot:
         self.PlotDescription = "evaluated at q={} a.u.".format( self.calc.q)
         self.ylabel = "S(k,ω), eV⁻¹"
         self.ylabel2  = r"sum rule"
-        self.plot_result2_dif_y_axes()        
+        self.second_y[1] = True
+        self.plot_graph()        
         
     def pseudo_charge_density(self):
         self.calc.PseudoChargeDensity()
@@ -515,7 +474,7 @@ class run_and_plot:
         self.Text_label[0] = "minimum charge density"+self.nl+r"from ELF up to " + str(self.calc.UpperELimit) + " eV"
         self.PlotDescription = ""
         self.ylabel = "pseudocharge density (e⁻/Å³)"
-        self.plot_result1()
+        self.plot_graph()
         
     def radial_charge_density(self):   
         self.calc.PseudoChargeDensity()
@@ -525,7 +484,7 @@ class run_and_plot:
            +self.nl+"MT Radius %6.2f Å"%self.calc.MT_radius
         self.PlotDescription = ""
         self.ylabel ="pseudocharge density (e⁻/Å³)"
-        self.plot_result1()    
+        self.plot_graph()    
          
     def radial_w_p_lambda(self):
         self.calc.PseudoChargeDensity()
@@ -537,25 +496,19 @@ class run_and_plot:
         self.Text_label[1] = "IMFP λ (Å)"
         self.Text_label[2] = "stopping (eV/Å)"
         self.Text_label[3] = "straggling (eV²/Å)"
-        self.plot_result4()    
+        self.plot_graph()    
         
     def shell_effect_all(self):
         self.calc.shell_effect(False)
-        # if self.x_axis_keV:
-            # self.xlabel = self.calc.particle + " energy (keV)"
-        # else:
-            # self.xlabel = self.calc.particle + " velocity (a.u.)"
-            # for i in range (self.calc.NStopping):
-                # self.calc.x_axis[i]= self.calc.CurvesVelocity[i]
-
+        self.xlabel = self.calc.particle + " energy (keV)"
         self.PlotDescription = "shell effect (I = {:.3f} eV)".format(self.calc.MIE)
+        
         self.Text_label[0] = "A = L Diel. Func."
-      
         self.LaTex_label[1] = r"B =  $\max(\ln{\frac{2v²}{I}}+ \ln{γ²}- β² + 0.5f(γ), 0)$"
         self.Text_label[1] = "B (Bethe limit)"
         self.Text_label[2] = "shell effect: A - B (≈ -C/Z₂)"
         self.Text_label[3] =  "0.5f(γ)" 
-        self.plot_result4()
+        self.plot_graph()
         
     def calc_projectile_range(self):
         self.calc.projectile_range()
@@ -563,7 +516,7 @@ class run_and_plot:
         self.Text_label[0] = "range (Å)"
         self.xlabel = self.calc.particle + " energy (keV)"
         self.ylabel=""
-        self.plot_result1()
+        self.plot_graph()
         
     def Energy_Deposition_Depth(self):
         self.calc.Energy_Depth_Dist()
@@ -572,7 +525,7 @@ class run_and_plot:
         self.Text_label[1] = "energy deposition (eV/Å), incl. straggling"
         self.xlabel = self.calc.particle + " depth (Å)"
         self.ylabel="eV/Å"
-        self.plot_result2()
+        self.plot_graph()
             
             
         
@@ -588,7 +541,7 @@ class run_and_plot:
         # self.PlotDescription = "shell effect, soft col., ($I =$ {:.3f} eV)".format(self.calc.MIE)
         # self.LaTex_label[0] = "L Bethe - L calc"
         # self.LaTex_label[1] = "L Bethe rel. - L calc"
-        # self.plot_result2()
+        # self.plot_graph()
         
     def DDCS_at_omega(self): 
         self.calc.DDCS_at_omega()
@@ -597,7 +550,7 @@ class run_and_plot:
         self.xlabel = "θ (mrad)"
         self.Text_label[0]= "ω =  {:.1f} eV, no retardation".format(self.calc.omega_ddcs)
         self.Text_label[1]= "ω =  {:.1f} eV, with retardation".format(self.calc.omega_ddcs)
-        self.plot_result2() 
+        self.plot_graph() 
         
     def DDCS_at_theta(self):  
         self.xlabel = "ω (eV)"
@@ -606,7 +559,7 @@ class run_and_plot:
         self.Text_label[1] = "θ =  {:.3g} mrad, incl. retardation".format(self.calc.theta_ddcs)
         self.PlotDescription = (self.particle_LaTeX + " {:.0f} keV,".format(self.calc.E0)) 
         self.calc.DDCS_at_theta()
-        self.plot_result2()         
+        self.plot_graph()         
         
     def dcs_omega_eq_plot(self):
         self.calc.colorplot_ddcs()
@@ -665,7 +618,7 @@ class run_and_plot:
         self.Text_label[1] =  "DCS incl. retardation"
         self.Text_label[2] = "Rutherford" 
         self.PlotDescription = "σ (this θ range, ω<{:.0f}eV): {:.2e}Å²".format(self.calc.UpperELimit,self.calc.sigma_from_DCS )
-        self.plot_result2() 
+        self.plot_graph() 
         
        
         
@@ -678,25 +631,67 @@ class run_and_plot:
         self.xlabel = "ω (eV)"
         self.Text_label[0] = "Intensity"
         self.PlotDescription = "REELS Spectrum, {:.1f} keV,".format(self.calc.E0)
-        self.plot_result1()
+        self.plot_graph()
             
 # ==========================plotting==========================================
 
-    def plot_result1(self):
-        if self.LaTex_label[0] =="": self.LaTex_label[0] = self.Text_label[0]
-        fig, axs = plt.subplots(1, 1)
-        
-        if(self.title_fontsize> 0): 
-            axs.set_title(self.CalcDescription+" "+self.PlotDescription, pad=10)
+    def plot_graph(self):
+        x = self.calc.x_axis
+        Local_xlabel= self.xlabel
+        if "ω (eV)" in Local_xlabel:
+            if self.calc.Energy_Scale_choice == 1:
+                 Local_xlabel = "nm"
+                 x= 1239.84/x
+            elif  self.calc.Energy_Scale_choice == 2:
+                 Local_xlabel = "cm⁻¹" 
+                 x=8065.6*x
+        if " energy (keV)" in Local_xlabel:  
+            if self.x_axis_keV:
+                if self.calc.particle== "electron":
+                    Local_xlabel = "electron energy (keV)"
+                else:
+                    x = x/1000.0
+                    Local_xlabel = "proton energy (MeV)"
+            else:
+                Local_xlabel = self.calc.particle + " velocity (a.u.)"
 
+              
+ 
+        fig, axs = plt.subplots(1, 1)
+        if(self.title_fontsize> 0): axs.set_title(self.CalcDescription+" "+self.PlotDescription, pad=10)
         axs.tick_params(direction="in", which="both", right=1, top=1)
         axs.ticklabel_format(axis="both", style="sci", scilimits=(-3,4))
         plt.subplots_adjust(left=0.15, right=0.95, top=0.85, bottom=0.11)
-        plt.plot(self.calc.x_axis, self.calc.Result1,  marker='.', label=self.LaTex_label[0])
+        plt.xlabel( Local_xlabel)
+        plt.ylabel(self.ylabel)
+        for Iplot in range(4):
+             if self.LaTex_label[Iplot] =="": self.LaTex_label[Iplot] = self.Text_label[Iplot]
+             
+        if self.Text_label[0] != "": 
+            plt.plot(x, self.calc.Result1, color= '#1f77b4',label=self.LaTex_label[0])
+        if self.second_y[1]:
+             plt.legend(loc = 'center right')
+             ax2 = axs.twinx() 
+             ax2.set_ylabel(self.ylabel2, rotation=270,labelpad=15)  
+        if self.Text_label[1] != "": 
+            plt.plot(x, self.calc.Result2, linestyle="dashed", color='#ff7f0e',label=self.LaTex_label[1])
+        if self.second_y[2]:
+             plt.legend(loc = 'center right')
+             ax2 = axs.twinx() 
+             ax2.set_ylabel(self.ylabel2, rotation=270,labelpad=15)  
+        if self.Text_label[2] != "": 
+            plt.plot(x, self.calc.Result3, linestyle="dotted", color='k',label=self.LaTex_label[2])  
+        if self.second_y[3]:
+             plt.legend(loc = 'center right')
+             ax2 = axs.twinx() 
+             ax2.set_ylabel(self.ylabel2, rotation=270,labelpad=15)  
+           
+        if self.Text_label[3] != "": 
+            plt.plot(x, self.calc.Result4, linestyle="dashdot",linewidth=1, color= '#9467bd',label=self.LaTex_label[3])        
         if (self.Overplot == 1) and (len(self.xCompArray) > 0):
             if not self.calc.LogX:
-                minimum= min(self.calc.x_axis)
-                maximum= max(self.calc.x_axis)
+                minimum= min(x)
+                maximum= max(x)
                 extrabit=(maximum-minimum)/50.0
                 plt.xlim((minimum-extrabit,maximum+extrabit))
             plt.plot(self.xCompArray, self.yCompArray, label=self.LiteratureDescription, color="red",marker='.', linestyle=self.overplotline)
@@ -706,208 +701,80 @@ class run_and_plot:
         if (self.calc.LogY == 1):
             plt.yscale("log")
          
-        plt.xlabel(self.xlabel)
-        plt.ylabel(self.ylabel)
-        if(self.legendfontsize > 0):plt.legend(loc=self.legendposition)
-        self.plotshow(plt)
 
-    def single_plot(self):
-        fig, axs = plt.subplots(1, 1)
-        if(self.title_fontsize> 0): axs.set_title(self.CalcDescription+" "+self.PlotDescription, pad=10)
-        axs.tick_params(direction="in", which="both", right=1, top=1)
-        axs.ticklabel_format(axis="both", style="sci", scilimits=(-3,4))
-        plt.subplots_adjust(left=0.15, right=0.95, top=0.85, bottom=0.11)
-        for Iplot in range(4):
-             if self.LaTex_label[Iplot] =="": self.LaTex_label[Iplot] = self.Text_label[Iplot]
-        
-        return 0 
+        if self.ylabel2 != "":
+            plt.ylabel(self.ylabel2, rotation=270)
+        else:
+            plt.legend(loc = 'center right')
+        if(self.legendfontsize > 0):plt.legend(loc='best')
+        self.plotshow(plt)
     
 
-    def plot_result2(self):
-        if self.LaTex_label[0] =="": self.LaTex_label[0] = self.Text_label[0]
-        if self.LaTex_label[1] =="": self.LaTex_label[1] = self.Text_label[1]
-        if self.LaTex_label[2] =="": self.LaTex_label[2] = self.Text_label[2]  #because sometimes this plots 3 curves
-        if self.LaTex_label[3] =="": self.LaTex_label[3] = self.Text_label[3]  #or 4
-        fig, axs = plt.subplots(1, 1)
-        if(self.title_fontsize> 0): 
-            axs.set_title(self.CalcDescription+" "+self.PlotDescription)
-        
-        axs.tick_params(direction="in", right=1, top=1)
-        # axs.ticklabel_format(axis="both", style="sci", scilimits=(-3,4))
-        # axs.ticklabel_format(useMathText=True)
-        if self.calc.Energy_Scale_choice > 0: 
-            ch =self.MyChapApp.plotchoice
-            if ch == "eps_w_direct" or ch == "one_over_eps_w_direct" or ch == "Kramers-Kronig tests" \
-                or ch == "one_over_eps_w_kk" or ch == "oscillator_strength" or ch == "n_k": 
-                    xaxis_II=[]
-                    if self.calc.Energy_Scale_choice ==1:
-                        for i in range(self.calc.NPoints):
-                            xaxis_II.append(1239.84/self.calc.x_axis[i])
-                        self.xlabel="nm" 
-                    else:
-                        for i in range(self.calc.NPoints):
-                            xaxis_II.append(8065.6*self.calc.x_axis[i])
-                        self.xlabel="cm⁻¹" 
-                    plt.plot(xaxis_II, self.calc.Result1,  marker='.', label=self.LaTex_label[0])
-                    plt.plot(xaxis_II,self.calc.Result2,linestyle="dashed",
-                        marker='.', label=self.LaTex_label[1])
-                     
-        else:
-            plt.plot(self.calc.x_axis, self.calc.Result1,  marker='.', label=self.LaTex_label[0])
-            plt.plot(self.calc.x_axis,self.calc.Result2,linestyle="dashed",
-                        marker='.', label=self.LaTex_label[1])
-        # if self.MyChapApp.plotchoice == "mean_ionization_energy":
-             # plt.plot(self.calc.x_axis,self.calc.Result3,linestyle="dotted", marker='.', label=self.LaTex_label[2])        
-
-        plt.xlabel(self.xlabel)
-        plt.ylabel(self.ylabel)
-        if self.MyChapApp.plotchoice == "dcs_plot":
-            axs.set_ylim(top=1.1 * np.amax(self.calc.Result2), bottom =0.9 * np.amin(self.calc.Result1))
-            plt.plot(self.calc.x_axis,self.calc.Result3,linestyle="dotted", marker='.', label=self.LaTex_label[2])
-        elif self.MyChapApp.plotchoice ==  "inertial_rules":
-            
-            
-            plt.plot(
-            [self.calc.x_axis[0], self.calc.x_axis[self.calc.NPoints - 1]],
-            [self.calc.limitingvalue, self.calc.limitingvalue],
-            color="firebrick", label=self.LaTex_label[2], linestyle="dashdot")
-            plt.plot(self.calc.x_axis,self.calc.Result4,linestyle="dotted", marker='.', label=self.LaTex_label[3])
-        else:
-            plotmax=np.max((self.calc.Result1,self.calc.Result2))   
-            plotmin=np.min((self.calc.Result1,self.calc.Result2))  
-            axs.set_ylim(top=1.05*plotmax, bottom =1.05 * plotmin)   
-            
-        if (self.Overplot == 1) and (len(self.xCompArray) > 0):
-            if not self.calc.LogX:
-                minimum= min(self.calc.x_axis)
-                maximum= max(self.calc.x_axis)
-                extrabit=(maximum-minimum)/50.0
-                plt.xlim((minimum-extrabit,maximum+extrabit))
-            plt.plot(self.xCompArray, self.yCompArray, label=self.LiteratureDescription, color="red",marker='.',linestyle=self.overplotline)
-        if(self.legendfontsize > 0):
-            plt.legend(loc=self.legendposition)
-        if(self.calc.LogX == 1):
-            plt.xscale("log")
-        if (self.calc.LogY == 1):
-            plt.yscale("log")
-        self.plotshow(plt)
-        
-        
-    def plot_result4(self):
-        if self.LaTex_label[0] =="": self.LaTex_label[0] = self.Text_label[0]
-        if self.LaTex_label[1] =="": self.LaTex_label[1] = self.Text_label[1]
-        if self.LaTex_label[2] =="": self.LaTex_label[2] = self.Text_label[2]
-        if self.LaTex_label[3] =="": self.LaTex_label[3] = self.Text_label[3]
-        fig, axs = plt.subplots(1, 1)
-        axs.ticklabel_format(axis="both", style="sci", scilimits=(-3,4))
-        if(self.title_fontsize> 0): 
-            axs.set_title(self.CalcDescription+" "+self.PlotDescription)
-        ch =self.MyChapApp.plotchoice
-        if ch == "shell_effect_all":                 
-            if self.x_axis_keV:
-                if self.calc.particle== "electron":
-                    self.calc.x_axis = self.calc.CurvesEnergy
-                    self.xlabel = "electron energy (keV)"
-                else:
-                    for i in range(self.calc.NStopping):
-                        self.calc.x_axis[i] = self.calc.CurvesEnergy[i]/1000.0
-                    self.xlabel = "proton energy (MeV)"
-            else:
-                self.calc.x_axis = self.calc.CurvesVelocity
-                self.xlabel = self.calc.particle + " velocity (a.u.)"
-
-        axs.tick_params(direction="in", right=1, top=1)
-        plt.plot(self.calc.x_axis, self.calc.Result1, marker='.', label=self.LaTex_label[0])
-        plt.plot(self.calc.x_axis,self.calc.Result2,linestyle="dashed", marker='.', label=self.LaTex_label[1])
  
-        plt.plot(self.calc.x_axis,self.calc.Result3,linestyle="dashed",label=self.LaTex_label[2],color="brown")
-        plt.plot(self.calc.x_axis,self.calc.Result4,linestyle="dotted",label=self.LaTex_label[3], color="black")
-            
-        if (self.Overplot == 1) and (len(self.xCompArray) > 0):
-            if  not self.calc.LogX:
-                minimum= min(self.calc.x_axis)
-                maximum= max(self.calc.x_axis)
-                extrabit=(maximum-minimum)/50.0
-                plt.xlim((minimum-extrabit,maximum+extrabit))
-            plt.plot(self.xCompArray, self.yCompArray, label=self.LiteratureDescription, color="red",marker='.', linestyle=self.overplotline)
-        if(self.calc.LogX == 1):
-            plt.xscale("log")
-        if (self.calc.LogY == 1):
-            plt.yscale("log")
-        plt.xlabel(self.xlabel)
-        plt.ylabel(self.ylabel)
-        if(self.legendfontsize > 0):
-            plt.legend(loc=self.legendposition)
-        self.plotshow(plt)
-        
     def plot_result3(self):
+        if self.x_axis_keV:
+            x = self.calc.CurvesEnergy
+            self.xlabel = self.calc.particle + " energy (keV)"
+        else:
+            x= self.calc.CurvesVelocity  
+            self.xlabel = self.calc.particle +" velocity (a.u.)"  
+        if self.plot_imfp:
+            Result1=self.calc.IMFPEnergy
+            self.Text_label[0] = "IMFP (Å)"
+        else:
+            Result1 =self.calc.CrosssectionEnergy   
+            self.Text_label[0] = "σ (Å²)"  
+        if self.StoppingUnits==0:
+            self.Text_label[1] = "stopping (eV/Å)"
+            self.StoppingFactor=1.0
+        elif self.StoppingUnits==1:
+            self.Text_label[1] = "stopping (eV / (1E¹⁵atoms/cm²))"
+            self.StoppingFactor=self.calc.massunitcell/(self.calc.specificweight*6.022)
+        elif self.StoppingUnits==2:
+            self.Text_label[1] = "stopping (MeV/(mg/cm²))"    
+            self.StoppingFactor=0.1/self.calc.specificweight
+        self.Text_label[2] = "straggling (eV²/Å)"    
         plt.rcParams["figure.figsize"] = [self.figurewidth,2*self.figureheight] 
         plt.rcParams["figure.autolayout"] = False
         self.dy=int(2*self.figureheight*self.px_per_cm)  # this one really controls the size
         fig, axs = plt.subplots(3, 1, sharex=True)
-     #   axs.ticklabel_format(axis="both", style="sci", scilimits=(-3,4))
+
         fig.subplots_adjust(hspace=0)
         plt.figtext(0.02, 0.95, self.CalcDescription, fontsize=self.legendfontsize)
 
         if(self.title_fontsize> 0): 
             plt.figtext(0.5, 0.90, self.PlotDescription, horizontalalignment="center", fontsize=self.title_fontsize)
-   
         
         for i in range(len(self.calc.x_LinearApprox_lowE)-1):
-            self.calc.x_LinearApprox_lowE[i+1]=self.calc.x_axis[i]
+            self.calc.x_LinearApprox_lowE[i+1]=x[i]
                 
-        axs[0].plot(self.calc.x_axis, self.calc.Result1, label= self.Text_label[0])
+        axs[0].plot(x, Result1, label= self.Text_label[0])
         if self.plot_imfp:
             axs[0].set_ylim(top=1.2 * self.calc.IMFPEnergy[self.calc.NStopping - 1])
             if self.calc.particle == "electron" and np.amax(self.calc.TPP_IMFPEnergy) > 0.0:
-                axs[0].plot( self.calc.x_axis, self.calc.TPP_IMFPEnergy, color="purple",
+                axs[0].plot( x, self.calc.TPP_IMFPEnergy, color="purple",
                     label="TPP-2m ω_p="+ f"{self.calc.w_p_TPP:.2f}" + "eV\n\ρ="
                     + f"{self.calc.specificweight:.2f}" + " g/cm³",linestyle="dotted")
    
 
             if not self.calc.Approximations:
-                axs[0].plot(
-                    self.calc.x_axis,
-                    self.calc.DL_IMFPaverage_Energy,
-                    color="orchid",
-                    label="Average DL IMFP: Cₐᵥ" + f"{self.calc.C0:.3f}"
-                    + ", I'ₐᵥ="
-                    + f"{self.calc.I0 :.1f}"
-                    + "eV",
-                    linestyle="-.",
-                )
+                axs[0].plot(x, self.calc.DL_IMFPaverage_Energy,  color="orchid",
+                    label="Average DL IMFP: Cₐᵥ" + f"{self.calc.C0:.3f}" + ", I'ₐᵥ=" + f"{self.calc.I0 :.1f}"
+                    + "eV", linestyle="-.", )
 
-                axs[0].plot(
-                    self.calc.x_axis,
-                    self.calc.DL_IMFP_sum_Energy,
-                    color="black",
-                    label="summed DL oscillators",
-                    linestyle="dotted",
-                )
-                axs[0].plot(
-                    self.calc.x_axis,
-                    self.calc.DL_IMFP_from_ELF,
-                    color="limegreen",
-                    label="DL IMFP from ELF",
-                    linestyle="dotted",
-                )
+                axs[0].plot( x,self.calc.DL_IMFP_sum_Energy,color="black",
+                    label="summed DL oscillators",linestyle="dotted")
+                axs[0].plot( x, self.calc.DL_IMFP_from_ELF,color="limegreen",
+                    label="DL IMFP from ELF", linestyle="dotted" )
                 if np.amax(self.calc.TPP_IMFPEnergy) > 0.0:
-                    axs[0].plot(
-                        self.calc.x_axis,
-                        self.calc.TPP_IMFPEnergy,
-                        color="purple",
-                        label="TPP-2m ω_p="
-                        + self.calc.Omegas[0]
-                        + "eV\n$ ρ=$"
-                        + f"{self.calc.specificweight:.2f}"
-                        + " g/cm³",
-                        linestyle="dotted",
-                    )
+                    axs[0].plot( x, self.calc.TPP_IMFPEnergy, color="purple",
+                        label="TPP-2m ω_p=" + self.calc.Omegas[0]+ "eV\n$ ρ=$" + f"{self.calc.specificweight:.2f}"
+                        + " g/cm³",linestyle="dotted")
         
      
         mylabel=r"$\frac{4π}{v²}$ N Z(L₀ + 0.5*F(γ))" + f"\n(I={self.calc.MIE:.1f}eV)"
-        axs[1].plot(self.calc.x_axis, self.calc.StoppingEnergy*self.StoppingFactor, label=self.LaTex_label[1])
-        axs[1].plot(self.calc.x_axis, self.calc.BetheStoppingEnergy_Salvat*self.StoppingFactor, color="firebrick",
+        axs[1].plot(x, self.calc.StoppingEnergy*self.StoppingFactor, label=self.LaTex_label[1])
+        axs[1].plot(x, self.calc.BetheStoppingEnergy_Salvat*self.StoppingFactor, color="firebrick",
             label=mylabel,
             linestyle="--")
 
@@ -917,86 +784,48 @@ class run_and_plot:
             linestyle="--")    
         
         if self.calc.Approximations:
-            axs[1].plot(
-                self.calc.x_axis,
-                self.calc.DL_StoppingEnergy*self.StoppingFactor,
-                color="orchid",
-                label=r"DL Formula from ELF\nC₁= "+ f"{self.calc.C1 :.3f}" + ", ω_p=" + f"{self.calc.MIE :.1f} eV",
-                linestyle="-.",
-            )
+            axs[1].plot(x, self.calc.DL_StoppingEnergy*self.StoppingFactor,
+                color="orchid",label=r"DL Formula from ELF\nC₁= "+ f"{self.calc.C1 :.3f}" + ", ω_p=" + f"{self.calc.MIE :.1f} eV",
+                linestyle="-.")
             if np.amax(self.calc.DL_Stopping_sum_Energy) > 0.0:
-                axs[1].plot(
-                    self.calc.x_axis,
-                    self.calc.DL_Stopping_sum_Energy*self.StoppingFactor,
-                    color="black",
-                    label="summed DL oscillators",
-                    linestyle="dotted",
-                )
-            axs[1].plot(
-                self.calc.x_axis,
-                self.calc.DL_Stopping_from_ELF*self.StoppingFactor,
-                color="limegreen",
-                label="DL stopping from ELF",
-                linestyle="dotted",
-            )
-        axs[2].plot(self.calc.x_axis, self.calc.StragglingEnergy, label=self.LaTex_label[2])
+                axs[1].plot(x,self.calc.DL_Stopping_sum_Energy*self.StoppingFactor,
+                    color="black",label="summed DL oscillators",linestyle="dotted")
+            axs[1].plot(x, self.calc.DL_Stopping_from_ELF*self.StoppingFactor,
+                color="limegreen",label="DL stopping from ELF",linestyle="dotted")
+        axs[2].plot(x, self.calc.StragglingEnergy, label=self.LaTex_label[2])
         if self.calc.particle == "proton":
             scalingfactor=1.0
         else:
             scalingfactor=4.0    
-        axs[2].plot(
-            [self.calc.x_axis[0], self.calc.x_axis[self.calc.NStopping - 1]],
-            [self.calc.BohrStraggling/scalingfactor, self.calc.BohrStraggling/scalingfactor],
-            color="darkgreen", label="Bohr Limit", linestyle="dashdot")
+        axs[2].plot([x[0], x[self.calc.NStopping - 1]], [self.calc.BohrStraggling/scalingfactor, 
+            self.calc.BohrStraggling/scalingfactor], color="darkgreen", label="Bohr Limit", linestyle="dashdot")
         if self.calc.particle == "proton":
-            axs[2].plot( self.calc.x_axis, self.calc.Straggling_Jackson, color="firebrick",
-                label="Jackson eq. 13.50",
-                linestyle="--")
+            axs[2].plot( x, self.calc.Straggling_Jackson, color="firebrick",
+                label="Jackson eq. 13.50", linestyle="--")
                 
             
         if self.calc.Approximations:
-            axs[2].plot( self.calc.x_axis, self.calc.BetheStragglingEnergy, color="firebrick",
+            axs[2].plot( x, self.calc.BetheStragglingEnergy, color="firebrick",
                 label="Bethe Formula\n"+ "ω_p=" + f"{self.calc.MIE :.1f}" + "eV",
                 linestyle="--")
-            if (
-                np.amax(self.calc.DL_StragglingEnergy) > 0.0
-            ) and self.calc.OscillatorsPresent:
-                axs[2].plot(
-                    self.calc.x_axis,
-                    self.calc.DL_StragglingEnergy,
-                    color="orchid",
-                    label="DL Formula from zero width osc.\n  C₂="
-                    + f"{self.calc.C2 :.3f}" + ", ω_p=" + f"{self.calc.Istraggling :.1f}"+ "eV",
-                    linestyle="-.",
-                )
+            if ( np.amax(self.calc.DL_StragglingEnergy) > 0.0) and self.calc.OscillatorsPresent:
+                axs[2].plot( x, self.calc.DL_StragglingEnergy, label="DL Formula from zero width osc.\n  C₂="
+                    + f"{self.calc.C2 :.3f}" + ", ω_p=" + f"{self.calc.Istraggling :.1f}"+ "eV",  color="orchid",
+                    linestyle="-.")
             elif np.amax(self.calc.DL_StragglingEnergy) > 0.0:
-                axs[2].plot(
-                    self.calc.x_axis,
-                    self.calc.DL_StragglingEnergy,
-                    color="orchid",
-                    label="DL Formula from ELF\n,  C₂=" + f"{self.calc.C2 :.3f}" + ", ω_p ="+ f"{self.calc.Istraggling :.1f}" + " eV",
-                    linestyle="-.",
-                )
+                axs[2].plot(x, self.calc.DL_StragglingEnergy, color="orchid", linestyle="-.",
+                    label="DL Formula from ELF\n,  C₂=" + 
+                    f"{self.calc.C2 :.3f}" + ", ω_p ="+ f"{self.calc.Istraggling :.1f}" + " eV")
             if np.amax(self.calc.DL_Straggling_sum_Energy) > 0.0:
-                axs[2].plot(
-                    self.calc.x_axis,
-                    self.calc.DL_Straggling_sum_Energy,
-                    color="black",
-                    label="summed DL oscillators",
-                    linestyle="dotted",
-                )
-            axs[2].plot(
-                self.calc.x_axis,
-                self.calc.DL_Straggling_from_ELF,
-                color="limegreen",
-                label="DL straggling from ELF",
-                linestyle="dotted",
-            )
+                axs[2].plot(x, self.calc.DL_Straggling_sum_Energy, color="black",label="summed DL oscillators", 
+                    linestyle="dotted" )
+            axs[2].plot(x,self.calc.DL_Straggling_from_ELF, color="limegreen",label="DL straggling from ELF", 
+                linestyle="dotted")
 
         if self.Overplot == 1:
             if not self.calc.LogX:
-                minimum= min(self.calc.x_axis)
-                maximum= max(self.calc.x_axis)
+                minimum= min(x)
+                maximum= max(x)
                 extrabit=(maximum-minimum)/50.0
                 plt.xlim((minimum-extrabit,maximum+extrabit))
             axs[self.comp_option_choice].plot(self.xCompArray, self.yCompArray,
@@ -1009,9 +838,7 @@ class run_and_plot:
                 axs[i].set_xscale("log")
             if (self.calc.LogY == 1):
                 axs[i].set_yscale("log")    
-            axs[i].tick_params(
-                axis="both", which="both", direction="in", right=1, top=1
-            )
+            axs[i].tick_params(axis="both", which="both", direction="in", right=1, top=1)
             axs[i].set_ylim(bottom=0)
         
         axs[1].set_ylim(top=1.1 * np.nanmax(self.calc.StoppingEnergy)*self.StoppingFactor)
@@ -1104,105 +931,6 @@ class run_and_plot:
                    
         plt.locator_params(axis='x', nbins=3)
         plt.locator_params(axis='y', nbins=3)
-        self.plotshow(plt)
-        
-        
-    def plot_result2_dif_y_axes(self):
-        if self.LaTex_label[0] =="": self.LaTex_label[0] = self.Text_label[0]
-        if self.LaTex_label[1] =="": self.LaTex_label[1] = self.Text_label[1]
-        fig, axs = plt.subplots(1, 1)
-        if(self.title_fontsize> 0): 
-            axs.set_title(self.PlotDescription+" "+self.CalcDescription)
-       
-
-        axs.tick_params(direction="in", right=1, top=1)
-        axs.ticklabel_format(axis="both", style="sci", scilimits=(-3,4))
-        plt.plot(self.calc.x_axis, self.calc.Result1, label=self.LaTex_label[0])
-        if (self.Overplot == 1) and (len(self.xCompArray) > 0):
-            if not self.calc.LogX:
-                minimum= min(self.calc.x_axis)
-                maximum= max(self.calc.x_axis)
-                extrabit=(maximum-minimum)/50.0
-                plt.xlim((minimum-extrabit,maximum+extrabit))
-            plt.plot(self.xCompArray, self.yCompArray, label=self.LiteratureDescription, color="red",marker='.',linestyle=self.overplotline)    
-        plt.subplots_adjust(left=0.16, right=0.83, top=0.9, bottom=0.11)
-
-        ymin,ymax = axs.get_ylim()
-        if(ymax < 0.01) or (ymax > 100):
-            axs.yaxis.set_major_formatter(FormatStrFormatter('%1.1E')) 
-            plt.subplots_adjust(left=0.21)
-        xmin,xmax = axs.get_xlim()
-        if(xmax < 0.01) or (xmax > 1000):
-            axs.xaxis.set_major_formatter(FormatStrFormatter('%1.0E'))    
-        plt.xlabel(self.xlabel)
-        plt.ylabel(self.ylabel)
-        if(self.legendfontsize > 0):
-            plt.legend(loc=self.legendposition)
-        ax2 = axs.twinx()  # instantiate a second axes that shares the same x-axis
-
-        color = "tab:red"
-    
-        ax2.plot(self.calc.x_axis, self.calc.Result2, color=color, linestyle="dashed",
-            label=self.LaTex_label[1])
-        
-        if(self.calc.LogX == 1):
-            lower_limit=  int(self.calc.NPoints/10) 
-        else:    
-            lower_limit= self.calc.NPoints - int(self.calc.NPoints/4)    
-        if self.ylabel2  == r"sum rule":    
-            ax2.plot(
-                [self.calc.x_axis[lower_limit], self.calc.x_axis[self.calc.NPoints - 1]],
-                [self.calc.q**2/2.0*cnst.HARTREE, self.calc.q**2/2.0*cnst.HARTREE],
-                color="darkgreen", label=r"$q^2/2$", linestyle="dashdot")    
-        ax2.tick_params(axis="y", labelcolor=color)
-
-        ax2_ylims = ax2.axes.get_ylim()  # Find y-axis limits set by the plotter
-        ax2.set_ylim(top=ax2_ylims[1] * 1.1)  # for esthetics only
-        ax2.set_ylabel(self.ylabel2, color=color, rotation=270, labelpad=15)#, labelpad=-15)
-        # if(ax2_ylims[1] * 1.1 < 0.01) or (ax2_ylims[1] * 1.1 > 1000):
-            # ax2.yaxis.set_major_formatter(FormatStrFormatter('%1.1E')) 
-            # plt.subplots_adjust(right=0.8)
-        # ax2.legend(loc="lower right")
-        if(self.calc.LogX == 1):
-            plt.xscale("log")
-        self.plotshow(plt)
-        
-    
-        
-    def plot_resultSumrules(self):
-        if self.LaTex_label[0] =="": self.LaTex_label[0] = self.Text_label[0]
-        if self.LaTex_label[1] =="": self.LaTex_label[1] = self.Text_label[1]
-        if self.LaTex_label[2] =="": self.LaTex_label[2] = self.Text_label[2]
-        if self.LaTex_label[3] =="": self.LaTex_label[3] = self.Text_label[3]
-        fig, axs = plt.subplots(1, 1)
-        if(self.title_fontsize> 0): 
-            axs.set_title(self.PlotDescription+" "+self.CalcDescription)
-
-        axs.tick_params(direction="in", right=1, top=1)
-        plt.plot(self.calc.x_axis, self.calc.Result1, label=self.LaTex_label[0])
-        plt.plot(
-            self.calc.x_axis, self.calc.Result2, linestyle="dashed", label=self.LaTex_label[1]
-        )
-        plt.plot(
-            self.calc.x_axis, self.calc.Result3, linestyle="dotted", label=self.LaTex_label[2]
-        )
-        axs.legend(loc="best")
-        plt.xlabel(self.xlabel)
-      #  ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        plt.ylabel(self.ylabel)
-        if(self.legendfontsize > 0):
-            plt.legend(loc='center right')
-        ax2 = axs.twinx()  # instantiate a second axes that shares the same x-axis
-
-        #color = "tab:purple"
-        ax2.plot( self.calc.x_axis,  self.calc.Result4, color="tab:purple", linestyle="dashed",label=self.LaTex_label[3])
-        ax2.tick_params(axis="y", labelcolor="tab:purple")
-        ax2_ylims = ax2.axes.get_ylim()  # Find y-axis limits set by the plotter
-        ax2.set_ylim(top=ax2_ylims[1] * 1.1)  # for esthetics only
-        ax2.set_ylabel("kk sum rule", color="tab:purple", rotation=270, labelpad=10)
-        ax2.legend(loc="lower right")
-        if(self.calc.LogX == 1):
-            plt.xscale("log")
         self.plotshow(plt)
         
         
