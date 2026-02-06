@@ -1,7 +1,9 @@
 # generic python modules
-#import os
+import os
 
 import sys
+print(sys.path)
+print(sys.path[1])
 import math
 import cmath
 import numpy as np
@@ -16,6 +18,11 @@ if(sys.platform == 'linux'):
     # cmake --build LinuxBuild
     from LinuxBuild import epslib
 elif(sys.platform == 'win32'): 
+    # to compile epslib issue (on windows) in the source directory:
+    # cmake  -G "MinGW Makefiles" -S . -B WindowsBuild
+    # cmake --build WindowsBuild 
+    #os.add_dll_directory(r"C:\Users\u9700295\mingw64\bin")
+    #os.add_dll_directory(sys.path[1])
     from WindowsBuild import epslib
 elif(sys.platform == 'darwin'):   
     from MacBuild import epslib

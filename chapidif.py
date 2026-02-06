@@ -1877,13 +1877,9 @@ ctrl+c, cmd+c:\t copy figure to clipboard     """
     
                  
 if __name__ == "__main__":
-    # Create the application
-  
+    
     app = QApplication(sys.argv)
     app.setStyle('Fusion') # was 'Windows'
-    # with open("ChapidifStyle.qss","r") as fh:
-        # app.setStyleSheet(fh.read())
-    # Create and show the main window
     win = myWindow()
     win.show()
     # Run the event loop
