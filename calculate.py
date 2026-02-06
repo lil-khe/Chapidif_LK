@@ -1,11 +1,9 @@
 # generic python modules
 import os
-
 import sys
-print(sys.path)
-print(sys.path[1])
 import math
 import cmath
+#python routines that may not be installed in the generic Python distroibution 
 import numpy as np
 #from scipy.integrate import cumulative_trapezoid
 import time
@@ -14,18 +12,17 @@ import constants as cnst
 print("platform:",sys.platform)
 if(sys.platform == 'linux'):
     # to compile epslib issue (on Linux) in the source directory:
-    # cmake -S . -B LinuxBuild
-    # cmake --build LinuxBuild
-    from LinuxBuild import epslib
+    # cmake -S . -B LinuxLib
+    # cmake --build LinuxLib
+    from LinuxLib import epslib
 elif(sys.platform == 'win32'): 
-    # to compile epslib issue (on windows) in the source directory:
-    # cmake  -G "MinGW Makefiles" -S . -B WindowsBuild
-    # cmake --build WindowsBuild 
-    #os.add_dll_directory(r"C:\Users\u9700295\mingw64\bin")
-    #os.add_dll_directory(sys.path[1])
-    from WindowsBuild import epslib
+    # to compile the library epslib issue (on windows) in the source directory:
+    # cmake  -G "MinGW Makefiles" -S . -B WindowsLib
+    # cmake --build WindowsLib 
+
+    from WindowsLib import epslib
 elif(sys.platform == 'darwin'):   
-    from MacBuild import epslib
+    from MacLib import epslib
       
 
 class calculate():

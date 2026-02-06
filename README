@@ -1,0 +1,11 @@
+The binary distributions are self-contained and do not require python or any additional packages
+
+installation from source:
+It requires a C compiler (GCC was used) and the folllowing (widely-used) python packages:
+matplotlib, pyqt6, numpy, nanobind.
+
+copy the files with  with subfolders to a place of your choice.
+execute the script "configure_and_build" in either the LinuxLib or WindowsLib subdirectory.
+This creates the library.  After that chapidif.py can be run like any python program. 
+
+if problems, do not hesitate to ask:  maarten.vos@anu.edu.au
