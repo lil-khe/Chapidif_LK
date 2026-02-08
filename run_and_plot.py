@@ -233,7 +233,7 @@ class run_and_plot:
         self.Text_label[2]= "KK-transform Im[1/ε(ω,q=%s)]" %str(self.calc.q)
         self.Text_label[3]= "KK-transform Re[-1/ε(ω,q=%s)]" %str(self.calc.q)
         self.PlotDescription = ""
-        self.plot_result4() 
+        self.plot_graph()   
         
     def eq_plot(self):  
         self.xlabel = "--"
@@ -259,7 +259,7 @@ class run_and_plot:
         self.Text_label[2]= "KK-transform k(ω,q=%s)]" %str(self.calc.q)
         self.Text_label[3]= "KK-transform n(ω,q=%s)]" %str(self.calc.q)
         self.PlotDescription = ""
-        self.plot_result4()    
+        self.plot_graph()   
  
             
     def n_k(self): 
@@ -329,12 +329,6 @@ class run_and_plot:
         self.plot_result3() 
         
     def prepare_for_writing_plotting(self):
-        # if self.x_axis_keV:
-            # self.calc.x_axis = self.calc.CurvesEnergy
-            # self.xlabel = self.calc.particle + " energy (keV)"
-        # else:
-            # self.calc.x_axis = self.calc.CurvesVelocity  
-            # self.xlabel = self.calc.particle +" velocity (a.u.)"  
         for i in range(len(self.calc.x_LinearApprox_lowE)-1):
             self.calc.x_LinearApprox_lowE[i+1]=self.calc.CurvesEnergy[i]
         if self.plot_imfp:
@@ -500,7 +494,13 @@ class run_and_plot:
         
     def shell_effect_all(self):
         self.calc.shell_effect(False)
-        self.xlabel = self.calc.particle + " energy (keV)"
+        
+        if self.x_axis_keV:
+            self.calc.x_axis = self.calc.CurvesEnergy
+            self.xlabel = self.calc.particle + " energy (keV)"
+        else:
+            self.calc.x_axis =  self.calc.CurvesVelocity  
+            self.xlabel = self.calc.particle +" velocity (a.u.)"  
         self.PlotDescription = "shell effect (I = {:.3f} eV)".format(self.calc.MIE)
         
         self.Text_label[0] = "A = L Diel. Func."

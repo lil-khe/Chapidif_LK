@@ -1242,13 +1242,12 @@ class calculate():
                
 
     def shell_effect(self, smallqonly):
-        self.calccurves(smallqonly)
-
         self.x_axis =  np.zeros(self.NStopping)  
         self.Result1 = np.zeros(self.NStopping)  
         self.Result2 = np.zeros(self.NStopping)  
         self.Result3 = np.zeros(self.NStopping)  
         self.Result4 = np.zeros(self.NStopping)  
+        self.calccurves(smallqonly)
         for Ecounter in range(self.NStopping):  
             prefactor =  4 * np.pi / self.CurvesVelocity[Ecounter] ** 2 * self.sumBethe * cnst.HARTREE / cnst.BOHR
             L_df = self.StoppingEnergy[Ecounter] / prefactor # recover L

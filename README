@@ -1,4 +1,4 @@
-The binary distributions are self-contained and do not require python or any additional packages
+The binary distributions are self-contained and do not require python or any additional packages. Just unzip the file for your platform, and run the file named chapidif.
 
 installation from source:
 It requires a C compiler (GCC was used) and the folllowing (widely-used) python packages:
