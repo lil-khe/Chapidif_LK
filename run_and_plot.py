@@ -15,7 +15,8 @@ class run_and_plot:
    # def __init__(self, *args, **kwargs):
     def __init__(self,parent):
         self.MyChapApp=parent
-        self.calc = self.MyChapApp.calc
+        #self.calc = self.MyChapApp.calc
+        self.calc = parent            ### MODIF 04/08 LK: When we don't use the GUI
         self.CalcDescription = ""
         self.LiteratureDescription ="lit. data"
         self.DisplayGrid = False
