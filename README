@@ -1,3 +1,11 @@
+MODIFIED VERSION OF CHAPIDIF
+Allow to use chapidif without GUI, compute and plot with more freedom.
+TO DO:
+  - Add Born-Ochkur exchange factor
+  - Allow to modify the energy integration limit
+  - Add step function for Mermin
+
+
 The binary distributions are self-contained and do not require python or any additional packages. Just unzip the file for your platform, and run the file named chapidif.
 
 installation from source:
