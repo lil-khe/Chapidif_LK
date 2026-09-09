@@ -1,5 +1,5 @@
-MODIFIED VERSION OF CHAPIDIF
-Allow to use chapidif without GUI, compute and plot with more freedom.
+MODIFIED VERSION OF CHAPIDIF (from Vos, Grande: https://doi.org/10.1016/j.cpc.2025.109657)
+Allows to use chapidif without GUI, compute and plot with more freedom.
 Model extensions:
   - Added the Born-Ochkur exchange factor for the total ELF
   - Added the ability to define the total ELF as a sum of individual ELFs with different parameters depending on the type of excitation
@@ -10,15 +10,16 @@ Modifications can be spotted by searching for the keyword 'MODIF'.
 An example of how to use this is available: 'Chapidif_tutorial.py'
 It uses the predefined plotting functions: 'plots.py'
 
+Linux installation:
+1) Download the tarball
+2) Create a python environment:
+        python -m venv venv
+        source venv/bin/activate
+3) Install needed libraries:
+        pip install numpy matplotlib PyQt6 nanobind
+4) Compile the C++ library:
+        cmake -S . -B LinuxLib
+        cmake --build LinuxLib
+Done!
 
-The binary distributions are self-contained and do not require python or any additional packages. Just unzip the file for your platform, and run the file named chapidif.
-
-installation from source:
-It requires a C compiler (GCC was used) and the folllowing (widely-used) python packages:
-matplotlib, pyqt6, numpy, nanobind.
-
-copy the files with  with subfolders to a place of your choice.
-execute the script "configure_and_build" in either the LinuxLib or WindowsLib subdirectory.
-This creates the library.  After that chapidif.py can be run like any python program. 
-
-if problems, do not hesitate to ask:  maarten.vos@anu.edu.au
+Don't hestitate to reach: lilian.khelladi@cea.fr
