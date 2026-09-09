@@ -14,6 +14,11 @@ from PyQt6.QtWidgets import (QApplication,QLabel, QMainWindow,
     QCheckBox,QButtonGroup ,QFrame  
 )
 
+### MODIF: IMPORTANT MODIFICATION POUR ECRIRE DES FLOAT ET ACTIVER LES TEXTBOX QUI NE FONCTIONNAIENT PAS ###
+from PyQt6.QtCore import QLocale
+QLocale.setDefault(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
+#####################################################################################################
+
 from calculate import calculate
 from run_and_plot import run_and_plot
 from read_write_files import read_write_files
