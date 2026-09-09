@@ -1,9 +1,14 @@
 MODIFIED VERSION OF CHAPIDIF
 Allow to use chapidif without GUI, compute and plot with more freedom.
-TO DO:
-  - Add Born-Ochkur exchange factor
-  - Allow to modify the energy integration limit
-  - Add step function for Mermin
+Model extensions:
+  - Added the Born-Ochkur exchange factor for the total ELF
+  - Added the ability to define the total ELF as a sum of individual ELFs with different parameters depending on the type of excitation
+  - Added integration limits
+  - Added a smoothed cutoff function
+Modifications can be spotted by searching for the keyword 'MODIF'.
+
+An example of how to use this is available: 'Chapidif_tutorial.py'
+It uses the predefined plotting functions: 'plots.py'
 
 
 The binary distributions are self-contained and do not require python or any additional packages. Just unzip the file for your platform, and run the file named chapidif.
