@@ -55,9 +55,18 @@ class calculate():
         self.AddELF: int = 1  # 1 add elf 0 add chi
         self.Stopping_calc_quality = 0
         self.ExchangeCorrection = False
+        self.UseBornOchkurExchange = False	### MODIF 05/08 LK: True to add the Born-Ochkur exchange factor (WARNING: non-relativistic !!!)
         self.Exchange_as_in_SBethe = False   #False means use method from Ashleya
         self.max_q_considered_surface: float = 200
         self.DebugMode= False
+        
+        ### MODIF 19/08 LK: Addition to enable the choice of excitation type for each oscillator
+        self.UseExchangeForOsc = [False] * self.maxOscillators
+        self.ExcitationTypeForOsc = [1] * self.maxOscillators	# 1=collective, 2=ionization
+        self.Egap = 0.0		# eV
+        self.BindingEnergyForOsc = [0.0] * self.maxOscillators	### MODIF 01/09 LK: allows to change the binding energy for each oscillator
+        self.UseMELF = False
+        ### END MODIF
 #========this concludes variables associated with DF, interfaced in tab1, and written to DF file===========
 
 #====================== now variables for tab2=======================
@@ -138,10 +147,12 @@ class calculate():
   
 #========================== for communicating with epslib=======================
 
-        self.NDFPAR = 5 * self.maxOscillators + 4 * self.maxGOS + 4 * self.maxBelkacem + 6 * self.maxKaneko
+        #self.NDFPAR = 5 * self.maxOscillators + 4 * self.maxGOS + 4 * self.maxBelkacem + 6 * self.maxKaneko
+        self.NDFPAR = 5 * self.maxOscillators + 4 * self.maxGOS + 4 * self.maxBelkacem + 6 * self.maxKaneko + 2 * self.maxOscillators	### MODIF 04/08 LK: Add the parameters for the edge step function
 # length of all the oscillaotor, Gos etc arrays filled in "fill_oscillators()"
       
-        self.ParArray = np.zeros(self.NDFPAR + 100)
+        #self.ParArray = np.zeros(self.NDFPAR + 100)
+        self.ParArray = np.zeros(self.NDFPAR + 100 + 3*self.maxOscillators)	### MODIF 19/08 LK: increase the space for parameters
         self.PartIntSum = np.zeros(10)
         self.OOSEnergy = np.zeros(1000)
         self.OOS = np.zeros(1000)
@@ -160,6 +171,12 @@ class calculate():
         self.Alphas = [1.0] * self.maxOscillators
         self.Gammas = [0.0] * self.maxOscillators
         self.Us = [0.0] * self.maxOscillators
+        
+        self.Eth = [0.0] * self.maxOscillators		### MODIF LK: For step function
+        self.Delta = [0.0] * self.maxOscillators	### MODIF LK: For step function
+        
+        self.UseExchangeForOsc = [False] * self.maxOscillators	### MODIF 19/08 LK: Initialization of Born-Ochkur exchange factor to 1
+        self.ExcitationTypeForOsc = [1] * self.maxOscillators	### MODIF 19/08 LK: Initialization of excitation type
         
         self.ConcGOS = [0.0] * self.maxGOS
         self.EdgeGOS = [100.0] * self.maxGOS
@@ -206,9 +223,31 @@ class calculate():
         error_code = self.fill_oscillators()
         if error_code == 0:
             error_code = self.fill_remainder()
-        if error_code != 0: self.calc.ErrorMessage = "initParArray retuned error code:"+ str(error_code)
+        if error_code == 0:				### MODIF 19/08 LK
+            error_code = self.fill_MELF_params()	### MODIF 19/08 LK: Call the function to give MELF parameters to epslib.cpp
+#        if error_code != 0: self.calc.ErrorMessage = "initParArray retuned error code:"+ str(error_code)
+        if error_code != 0: self.ErrorMessage = "initParArray retuned error code:"+ str(error_code)	### MODIF 09/09 LK: calc.ErrorMessage doesn't exist
         return error_code    
             
+    ### MODIF 19/08 LK: Small function to fill the parameters used in the MELF formalism
+    def fill_MELF_params(self):
+        ### Born-Ochkur exchange only possible if the incident particle is an electron
+        if self.particle != "electron":
+            if any(self.UseExchangeForOsc):
+                print("!!! WARNING !!!\nBorn-Ochkur exchange (per-oscillator) disabled: particle is NOT an electron\nEND WARNING")
+            self.UseExchangeForOsc = [False] * self.maxOscillators
+        if self.UseMELF:
+            for i in range(self.maxOscillators):
+                if abs(self.Amps[i]) > 1e-90 and self.ExcitationTypeForOsc[i] not in (1,2):
+                    print(f"!!! WARNING !!!\nOscillator {i} is active but has no valid ExcitationTypeForOsc (must be 1 or 2)\nEND WARNING")
+        for i in range(self.maxOscillators):
+            self.ParArray[self.NDFPAR + 50 + i] = float(self.UseExchangeForOsc[i])
+            self.ParArray[self.NDFPAR + 50 + self.maxOscillators + i] = float(self.ExcitationTypeForOsc[i])
+            self.ParArray[self.NDFPAR + 50 + 2*self.maxOscillators + 1 + i] = self.BindingEnergyForOsc[i]
+        self.ParArray[self.NDFPAR + 50 + 2*self.maxOscillators] = self.Egap
+        
+        return 0
+    ### END MODIF
 
     def fill_oscillators(self):
         if self.DFmodel =="Drude" or self.DFmodel == "Tauc" or self.DFmodel == "BB"or self.DFmodel == "OC":
@@ -243,10 +282,10 @@ class calculate():
                 self.ParArray[4 * i + offset + 1] = self.Conc_Belkacem[i]
                 self.ParArray[4 * i + offset + 2] = self.w_Belkacem[i]
                 self.ParArray[4 * i + offset + 3] = self.gamma_Belkacem[i]
-            offset += 4 * self.maxBelkacem
         except ValueError as e:
             self.ErrorMessage += "Input error Belkacem no: " + str(i+1) + "\n"  + str(e)     
-            return 3             
+            return 3      
+        offset += 4 * self.maxBelkacem       
         try:
             for i in range(self.maxKaneko):
                 self.ParArray[6 * i + offset + 1] = self.N_Kaneko[i]
@@ -255,10 +294,19 @@ class calculate():
                 self.ParArray[6 * i + offset + 4] = self.Edge_Kaneko[i]
                 self.ParArray[6 * i + offset + 5] = float(self.l_Kaneko[i])
                 self.ParArray[6 * i + offset + 6] = self.gamma_Kaneko[i]
-            
         except ValueError as e:
             self.ErrorMessage += "Input error Kaneko no: " + str(i+1) + "\n"  + str(e)   
             return 4
+        offset += 6 * self.maxKaneko	### MODIF 04/08 LK: shift parameters
+        ### MODIF 04/08 LK: Add parameters for Edge Function
+        try:
+            for i in range(self.maxOscillators):
+                self.ParArray[2*i + offset + 1] = self.Eth[i]
+                self.ParArray[2*i + offset + 2] = self.Delta[i]
+        except ValueError as e:
+            self.ErrorMessage += "Input error Edge Function no: " + str(i+1) + "\n"  + str(e) 
+            return 5
+        ### END MODIF
         return 0                
 
     def fill_remainder(self):
@@ -341,6 +389,14 @@ class calculate():
         self.ParArray[self.NDFPAR + 35] = float(self.MottCorrection)
         self.ParArray[self.NDFPAR + 36] = self.BE_for_exchange  
         self.ParArray[self.NDFPAR + 37] = float(self.Exchange_as_in_SBethe) #0 is Ashley 1(true) is SBethe
+        ### MODIF 06/08 LK: Born Ochkur exchange is only possible if the incident particle is an electron (indistinguishability)
+        if self.particle == "electron":
+            self.ParArray[self.NDFPAR + 41] = float(self.UseBornOchkurExchange)	### MODIF 05/08 LK: Give this parameter to epslib.cc
+        else:
+            self.UseBornOchkurExchange = False
+            self.ParArray[self.NDFPAR + 41] = float(self.UseBornOchkurExchange)
+            print("!!! WARNING !!!\nBorn Ochkur exchange factor disabled: particle is NOT an electron\nEND WARNING")
+        ### END MODIF
         self.ParArray[self.NDFPAR + 38] = float(self.delayed_dispersion)
         self.ParArray[self.NDFPAR + 39] = float(self.Add_Doppler_Width)
         self.ParArray[self.NDFPAR + 40] = float(self.DebugMode) #controls debugging output
@@ -758,8 +814,14 @@ class calculate():
             self.ParArray[self.NDFPAR + 1] = CurrentE * 1000
             self.CurvesVelocity[Ecounter] = self.velocity_projectile(CurrentE)   # V in a.u. (using relativistic kinematics)
  
-            epslib.DIIMFP(self.ParArray,dummy, self.DFChoice,self.StoppingResultArray)
-                
+#            epslib.DIIMFP(self.ParArray,dummy, self.DFChoice,self.StoppingResultArray)
+            ### MODIF 19/08 LK: If we use MELF (so sum of independant ELF_i)
+            if self.UseMELF:
+                epslib.DIIMFP_MELF(self.ParArray, dummy, self.DFChoice, self.StoppingResultArray)
+            else:
+                epslib.DIIMFP(self.ParArray, dummy, self.DFChoice, self.StoppingResultArray) 
+            ### END MODIF
+            
             self.IMFPEnergy[Ecounter] = self.StoppingResultArray[0]
             self.CrosssectionEnergy[Ecounter] = 1.0 / (self.UnitCellDensity * self.StoppingResultArray[0])
             self.StoppingEnergy[Ecounter] = self.StoppingResultArray[1]
@@ -781,7 +843,8 @@ class calculate():
         self.Stopping_Linear_V()
         self.Bethe_L_Salvat()
         self.calculate_Straggling_Jackson()
-        if self.particle == 0:
+        #if self.particle == 0:
+        if self.particle == "electron":		### MODIF 04/08 LK: probably a bug in Chapidif
             self.TanumaPowellPenn()
        
         if self.Approximations:
@@ -1079,8 +1142,8 @@ class calculate():
         U = self.w_p_TPP**2 / 829.4
         C_TPP_2m = 1.97 - 0.91 * U
         D_TPP_2m = 53.4 - 20.8 * U
-        print("calculated Beta", beta_TPP_2m, "w_p^2*beta",   beta_TPP_2m * self.w_p_TPP**2,
-            "gamma_TPP_2m",  gamma_TPP_2m)
+        #print("calculated Beta", beta_TPP_2m, "w_p^2*beta",   beta_TPP_2m * self.w_p_TPP**2,		### MODIF 20/08 LK: Remove the print (I don't get why it would be useful for)
+        #    "gamma_TPP_2m",  gamma_TPP_2m)
                 # start code tor TPP IMFP 
        
         for Ecounter in range(self.NStopping):
