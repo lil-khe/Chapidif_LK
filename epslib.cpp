@@ -57,7 +57,8 @@ bool debugmessageprinted=false;
 bool DebugMode=false;
 const int NGOSscaling = 80;
 const int NTaucscaling =100;
-double Ai[MAXOSC], gammai[MAXOSC], wi[MAXOSC], alphai[MAXOSC],gapi[MAXOSC], Q_Vlasov[MAXOSC], sigmai[MAXOSC], TaucGap[MAXOSC];
+//double Ai[MAXOSC], gammai[MAXOSC], wi[MAXOSC], alphai[MAXOSC],gapi[MAXOSC], Q_Vlasov[MAXOSC], sigmai[MAXOSC], TaucGap[MAXOSC];
+double Ai[MAXOSC], gammai[MAXOSC], wi[MAXOSC], alphai[MAXOSC],gapi[MAXOSC], Q_Vlasov[MAXOSC], sigmai[MAXOSC], TaucGap[MAXOSC], Ethi[MAXOSC], deltai[MAXOSC];	///// MODIF 04/08 LK: Add Eth and delta for F edge factor
 double AiGOS[MAXGOS ],Edgei_GOS[MAXGOS],Zi_GOS[MAXGOS];
 double GOS_ScalingFactor[MAXGOS][NGOSscaling], Tauc_ScalingFactor[MAXOSC][NTaucscaling];
 double GOS_Scaling_q[NGOSscaling], Tauc_Scaling_q[NTaucscaling];
@@ -89,6 +90,11 @@ bool modelDrude, modelDL, modelMerminLL,modelVlasov, modelTaucLorentz, modelTL_a
 bool modelTauc_Mermin;
 bool Orosco_Coimbra_way;
 int ExchangeCorrection;
+bool UseBornOchkurExchange;	//// MODIF 05/08 LK: Make it possible to use Born-Ochkur factor for exchange
+bool UseExchangeForOsc[MAXOSC];	//// MODIF 18/08 LK: Make it possible to use Born-Ochkur factor for exchange (choose for each oscillator)
+double EmaxForOsc[MAXOSC];	//// MODIF 18/08 LK: Add a variable to change the Emax of integration
+double BindingEnergyForOsc[MAXOSC];	//// MODIF 01/09 LK: Add a variable to compute Emax from the per-oscillator binding energy for individual/ionization type
+double Egap;			//// MODIF 19/08 LK: Add a variable to compute Emin from the bandgap energy
 double abserr, relerr;
 double FirstEnergy ,StepSize_eV,StepSize,Stepsize_qplot ,LastMomentum; 
 double q_lower,q_upper;
@@ -178,7 +184,13 @@ double w_at_q(double w,double q,double alpha)
     else w_q = w+alpha*Qrecoil;
     return w_q;
 }
-
+//// MODIF 04/08 LK: Add the edge factor function
+inline double EdgeFactor(double E, double Eth, double delta)
+{
+    if (delta == 0.0) return 1.0;	// feature off for this oscillator
+    return 1.0 / (1.0 + exp(-delta * (E - Eth)));
+}
+//// END MODIF
 inline dcomp reciprocal(dcomp chi)    //works both ways: also gets chi from oneoverchi
 { 
     dcomp eps,oneovereps, oneoverchi;
@@ -1392,6 +1404,7 @@ dcomp calculate_eps_osc(double q)
         else if(modelBrendelBormann) chi = Chi_BrendelBormann(q,w_global,i);
         if(AddELF)
             {  oneoverchi= reciprocal(chi);
+               oneoverchi *= EdgeFactor(w_global, Ethi[i], deltai[i]);	//// MODIF 04/08 LK: Multiply by F for edges
                oneoverchi_sum +=oneoverchi;
             }
             else  chi_sum+=chi;
@@ -1457,10 +1470,9 @@ dcomp calculate_chi_GOS_dens(double q, double omega, int GOSi) //// calculates e
                                                                    // contains the scaling factor
     chi_real=0.0;
     chi_imag=pi*W_plasmon_GOS_square/(2.0*omega)*GOSx(n_i_GOS[GOSi], l_i_GOS[GOSi], Zi_GOS[GOSi], Edgei_GOS[GOSi], q, omega);
-   
+
     if(omega < maxEnergyDensityEffect)
     {
-      
         double current_StepSize=Edgei_GOS[GOSi]/200;// assume these are core levels  energy resolution required of the order of 0.5% of BE?
         double w_below=omega-current_StepSize;
         double w_above=omega+current_StepSize;
@@ -1516,6 +1528,29 @@ double calculate_loss_GOS_dens(double q)
         }
      return loss;  
 }
+
+//// MODIF 19/08 LK: Define the inner electron excitation as individual ionization (apply exchange and new integration limit)
+double calculate_loss_GOS_dens_MELF(double q)
+{ // calculate contribution GOS to loss function including density effect
+    double loss=0.0;
+        for (int i = 0; i < MAXGOS; i++)
+        {
+            if (AiGOS[i] > 0.0)
+            {
+                double EmaxThisGOS = (E_0 + Edgei_GOS[i]) / 2.0;	//// Ionization cutoff
+                if (w_global > EmaxThisGOS) continue;
+                dcomp chiGOS = calculate_chi_GOS_dens(q, w_global,i);
+                dcomp oneovereps = dcomp(1.0,0.0) / (chiGOS+dcomp(1.0,0.0));
+                double loss_i = -oneovereps.imag();
+                double x = (q * q) / (2.0*E_0);
+                loss_i *= (1.0 - x + x*x);
+                loss += loss_i;
+            }
+        }
+     return loss;  
+}
+//// END MODIF
+
 dcomp calculate_chi_allGOS_dens( double q)
 { // calculate eps corresponding to the GOS, incl density effect
     dcomp chiGOS,chiGOS_i, oneoverchi, sum_chi, sum_oneoverchi;
@@ -1574,6 +1609,7 @@ double  mylossfun_exchange(double q)
     double loss_function_direct,loss_function_exchange;
     eps = calculate_eps_osc( q);
     result = eps.imag() / (norm(eps));  //calculate Im [-1/eps],  norm returns sum of squares
+    
     GOS=calculate_loss_GOS_dens(q);
     Kaneko= calculate_Loss_AA_LL(q);
     Belkacem=calculate_loss_Belkacem(q);
@@ -1613,6 +1649,40 @@ double  mylossfun_exchange(double q)
     return(result/q);  //return epsilon over q, as required for quanc8 integral
 }
 
+//// MODIF 05/08 LK: Add the Born-Ochkur exchange factor to the loss function
+double mylossfun_BornOchkur(double q)
+{
+    // Born-Ochkur exchange factor: fex = 1 - x + x^2, x = q^2/(2T)
+    // T is the projectile kinetic energy, already held in the global E_0
+    double x = (q * q) / (2.0 * E_0);
+    double fex = 1.0 - x + x * x;
+    return mylossfun(q) * fex;
+}
+//// END MODIF
+
+//// MODIF 19/08 LK: New function to compute ELF as the sum of independant ELF_i with various use of exchange and integration limit
+double mylossfun_MELF(double q)
+{
+    double result = 0.0;
+    for (int i = 0; i < MAXOSC; i++)
+    {
+        if (fabs(Ai[i]) < 1e-90) continue;
+        if (w_global > EmaxForOsc[i]) continue;
+        dcomp eps_i = get_eps_component(i, q);
+        double loss_i = eps_i.imag() / norm(eps_i);
+        loss_i *= EdgeFactor(w_global, Ethi[i], deltai[i]);
+    
+        if (UseExchangeForOsc[i])
+        {
+            double x = (q * q) / (2.0 * E_0);
+            loss_i *= (1.0 - x + x * x);
+        }
+        result += loss_i;
+    }
+    double GOS = calculate_loss_GOS_dens_MELF(q);	//// Use the GOS with ionization type excitation
+    return (result + GOS) / q;
+}    
+//// END MODIF
 
 
 double  fun_neutral(double q)  // have to add Belkacem and Kaneko?
@@ -1913,6 +1983,16 @@ int  copyP_to_Vars(double *p,  int modelchoice)
         
 
     Param_Offset += 6*MAXKANEKO;
+    
+    //// MODIF 04/08 LK: add and shift the reading of the parameters
+    for (int i = 0; i < MAXOSC; i++)
+    {
+        Ethi[i] = p[2*i + Param_Offset + 1] / Hartree;
+        deltai[i] = p[2*i + Param_Offset + 2] * Hartree;	// delta has units 1/energy
+    }
+    Param_Offset += 2*MAXOSC;
+    //// END MODIF
+    
     E_0= p[Param_Offset + 1]/Hartree;
 
     
@@ -2047,6 +2127,30 @@ int  copyP_to_Vars(double *p,  int modelchoice)
     delayed_dispersion= (bool) p[Param_Offset + 38]; //if 1 then dispersion calculated from energy of the level is  assumed shifted as in the LL model    
     add_Dopplerwidth_to_classical_DF= (bool) p[Param_Offset + 39];
     
+    UseBornOchkurExchange = (bool) p[Param_Offset + 41];	//// MODIF 05/08 LK: Read the new parameter
+    //// MODIF 05/08 LK: Born-Ochkur exchange factor is derived from a non-relativistic formalism. If beta > 0.3 (arbitrary) then it prints a warning for each energy where this condition is raised.
+    if (UseBornOchkurExchange && beta_r > 0.3)
+    {
+    fprintf(stderr,
+        "WARNING: Born-Ochkur exchange factor used at beta=%.3f (E_0=%.2f keV) -- "
+        "Born-Ochkur is a non-relativistic approximation, check its reliability.\n",
+        beta_r, E_0 * Hartree / 1000.0);
+    }
+    //// END MODIF
+    
+    //// MODIF 19/08 LK: Read the bandgap and the valence binding energy and determine the max energy for each oscillator
+    Egap = p[Param_Offset + 50 + 2*MAXOSC] / Hartree;
+    for (int i = 0; i < MAXOSC; i++)
+    {
+        UseExchangeForOsc[i] = (bool) p[Param_Offset + 50 + i];
+        int excitation_type = (int) p[Param_Offset + 50 + MAXOSC + i];
+        BindingEnergyForOsc[i] = p[Param_Offset + 50 + 2*MAXOSC + 1 + i] / Hartree;   //// MODIF LK 01/09: new per-osc slot
+        if (excitation_type == 1) EmaxForOsc[i] = E_0;
+        else if (excitation_type == 2) EmaxForOsc[i] = (E_0 + BindingEnergyForOsc[i]) / 2.0;
+        else EmaxForOsc[i] = E_0;
+    }
+    ////END MODIF
+
     DebugMode= p[Param_Offset + 40];
     if(DebugMode )printf("debug mode is on\n");
     return 0;//end copyP_to_Vars
@@ -2086,6 +2190,8 @@ double DIIMFP_at_omega(double omega)
     if (errno !=0) my_perror("DIIMFP_at_omega: before quanc8 an error occured");
     if (neutral && (Projectile_Mass > 1.0) )
         quanc8(fun_neutral, q1, q2used, abserr, relerr);
+    else if (UseBornOchkurExchange)					//// MODIF 05/08 LK: If use of the Born-Ochkur exchange factor
+        quanc8(mylossfun_BornOchkur, q1, q2used, abserr, relerr);	//// MODIF 05/08 LK: Then integrate over the loss function WITH this factor
     else if (ExchangeCorrection == 1)
         quanc8(mylossfun_exchange, q1,  q2used, abserr, relerr); 
     else
@@ -2111,6 +2217,54 @@ double DIIMFP_at_omega(double omega)
     return DIIMFP_au;
 }
 
+//// MODIF 19/08 LK:
+double DIIMFP_MELF_at_omega(double omega)
+{
+    w_global = omega;
+    double q2used, Qrecoil_max;
+    
+    double E_1=E_0-omega;
+    if(E_1 <=0.0) return 0.0;
+ 
+    double v_1 = velocity_from_energy(E_1,Projectile_Mass); // projectile velocity, used in DIIMFP and DSEP calculation
+    double p_1=(1.0+E_1/rest_mass_energy)*Projectile_Mass*v_1;
+   
+    double q1 = p_0 - p_1; //integration boundaries
+    double q2 = p_0 + p_1;
+    
+    Qrecoil_max= recoil_energy(q2);
+   
+
+    if ((Qrecoil_max > 2*omega)and !modelVlasov) //calculate the momentum of an electron with energy omega, i.e. the maximum transferred momentum, factor 2 beacuse struck electron not stationary
+    {  
+         double totalE=omega+C*C;
+         q2 =sqrt(pow(totalE,2)-pow(C,4))/C+5.0;// the additional amount 5 is because electrons are not stationary, so better go out a bit further
+    }
+    q2used=q2;
+
+    if(q1 <  q_lower) q1=q_lower;  //this is for when we want to calculate partial diimfp's
+    if(q2used <   q_lower) q2used=q_lower;
+    if(q1 >  q_upper) q1=q_upper;
+    if(q2used > q_upper)  q2used=q_upper;
+    if (errno !=0) my_perror("DIIMFP_at_omega: before quanc8 an error occured");
+
+    quanc8(mylossfun_MELF, q1,  q2used, abserr, relerr); 
+
+    double DIIMFP_au=2.0* quanc8result /(pi*v_0*v_0);
+
+    if(DebugMode)
+    {
+        if(quanc8flag > 0.0)
+        {
+            printf("omega %6.3f, quanc8flag %9.6f q1 %6.4g q2 %6.4g\n",omega*Hartree,quanc8flag,q1,q2used);
+        } 
+        if (errno !=0) printf("omega %6.4f\n",omega);
+        if (errno !=0) my_perror("DIIMFP_at_omega: an error occured");
+    }   
+   // if(DIIMFP_au < 1e-200) DIIMFP_au=1e-200;
+    return DIIMFP_au;
+}
+//// END MODIF
  
 double  calc_DSEP(double *DSEPresult, double BeamE,  double theta )
 {  
@@ -2471,6 +2625,63 @@ double DDCS_incl_retardation(double omega, double theta)
         }
         return 0;
     }
+    
+//// MODIF 19/08 LK:
+    int DIIMFP_MELF(npArray ParameterArray, npArray npDIIMFPArray, int modelchoice, npArray npResultArray)
+    {
+       //diimfp calculated for all energy losses with first fixed (for DIIMFP distribution) and then  variable stepsize, (for stopping straggling and IMFP calculation).
+       double* DIIMFPresult= npDIIMFPArray.data();
+       double* ResultArray=  npResultArray.data();
+       double inv_lambda=1E-99;  // so we never get divide by 0
+       double stopping=0.0;
+       double straggling=0.0;
+       copyP_to_Vars(ParameterArray.data(), modelchoice);
+       double omega= Egap + 0.5*StepSize;		//// !!! IMPORTANT !!! Egap is the new min energy for integration !!! was: double omega=0.5*StepSize;
+       double Current_StepSize=StepSize;
+       double Effective_Stepsize=Current_StepSize;
+       double DIIMFP_au;
+       double omega_max= 2*beta_r*beta_r*gamma_rel*gamma_rel*C*C;
+
+       double MottFactor= (1- beta_r*beta_r*omega/omega_max); // correction factor SalvatPRA eq.16, not sure about this one, esp. for electrons
+       
+       bool KeepGoing=true;
+       int i=0;
+       while (KeepGoing)
+       {    
+            DIIMFP_au= DIIMFP_MELF_at_omega(omega);
+           
+ 
+            if(MottCorrection)DIIMFP_au *= MottFactor; // correction factor Salvat PRA  106 032809 eq.16
+            inv_lambda     += DIIMFP_au * Effective_Stepsize;
+            stopping       += DIIMFP_au * Effective_Stepsize * omega;
+            straggling     += DIIMFP_au * Effective_Stepsize * omega * omega;
+            if(i < NStep)
+            {
+                DIIMFPresult[i] = DIIMFP_au/ (Hartree*BohrRadius);
+                i++;
+            }
+            else
+            {   Effective_Stepsize =Current_StepSize;
+                Current_StepSize=StepSize+lin_cont_deltaE*omega;
+                Effective_Stepsize =(Effective_Stepsize+Current_StepSize)/2.0;  //average of previous and this stepsize
+            }
+            omega=omega+Current_StepSize;
+            
+            if (omega < omega_max) MottFactor= (1- beta_r*beta_r*omega/omega_max);// keep Mott factor the same for omega > omega_max
+            if(omega > 1.5* omega_max+2.0) KeepGoing=false; 
+        }
+        if (errno !=0) my_perror("halfway _for_stopping: an error occured");
+        ResultArray[0]=(1.0/(inv_lambda+1.0e-99))*BohrRadius;  //IMFP now in Angstrom;
+        ResultArray[1]=Hartree* (stopping)/BohrRadius;  //stopping now in eV/Angstrom
+        ResultArray[2]= Hartree*Hartree* (straggling)/BohrRadius;  //straggling  now in eV^2/Angstrom
+        if(DebugMode)
+        {
+            if (errno !=0) my_perror("DIIMFP_for_stopping at end: an error occured");
+        }
+        return 0;
+    }
+//// END MODIF
+
  int  DIIMFP_variable_step(npArray ParameterArray, const npArray npomega_values,const npArray npstep_values, npArray npDIIMFPArray, int modelchoice, npArray npResultArray)
     {
        //diimfp calculated for all energy losses with first fixed (for DIIMFP distribution) and then  variable stepsize, (for stopping straggling and IMFP calculation).
@@ -3104,7 +3315,8 @@ NB_MODULE(epslib, m) {
     m.def("eps_Scaling_init",&eps_Scaling_init, "calculate q dependent normalisation factors");  
     m.def("Kramers_Kronig_eps1_from_eps2", &Kramers_Kronig_eps1_from_eps2, "calculate eps1 from eps2 using Kramers Kronig");
     m.def("Kramers_Kronig_eps2_from_eps1", &Kramers_Kronig_eps2_from_eps1, "calculate eps2 from eps1 using Kramers Kronig");
-    m.def("DIIMFP", &DIIMFP,"cacl differential inverse mean free path");
+    m.def("DIIMFP", &DIIMFP,"calc differential inverse mean free path");
+    m.def("DIIMFP_MELF", &DIIMFP_MELF,"calc differential inverse mean free path as the sum of independent per-oscillator ELF contributions (MELF)");
     m.def("Loss_wide",&Loss_wide,"loss array over wide range, non-linear grid");
     m.def("DDCS_at_omega",&DDCS_at_omega,"double diff cross section at energy omega");
     m.def("DDCS_at_theta",&DDCS_at_theta, "double diff cross section at angle theta");
@@ -3114,7 +3326,6 @@ NB_MODULE(epslib, m) {
     m.def("SurfLossFunc", &SurfLossFunc, "calculate surface loss function");
     m.def("DSEP", &DSEP, "calculate differential surface excitation probability");
     m.def("calc_REELS",&calc_REELS,"calculate an (r)eels spectrum");
-    m.def("TaucMermin_SumRule", &TaucMermin_SumRule, "calculate sum rule for Tauc-truncated mermin DF");
     m.def("TaucMermin_SumRule", &TaucMermin_SumRule, "calculate sum rule for Tauc-truncated mermin DF");
     m.def("TL_an_SumRule", &TL_an_SumRule, "calculate sum rule for Tauc_analytic DF"); 
     m.def("TaucSumRule", &TaucSumRule, "calculate sum rule for Tauc DF");
