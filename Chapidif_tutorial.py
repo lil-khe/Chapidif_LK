@@ -129,7 +129,7 @@ calc.Egap = 1.12
 #   ExcitationTypeForOsc[i] = 2  -> individual (ionization): UseExchangeForOsc should be True
 calc.ExcitationTypeForOsc[0] = 1       # oscillator 0: collective
 calc.UseExchangeForOsc[0] = False      # oscillator 0: no exchange
-calc.ExcitationTypeForOsc[1] = 1       # oscillator 1: individual
+calc.ExcitationTypeForOsc[1] = 2       # oscillator 1: individual
 calc.UseExchangeForOsc[1] = True       # oscillator 1: exchange on
 calc.BindingEnergyForOsc[1] = 120      # oscillator 1: binding energy (required if exchange on)
 
