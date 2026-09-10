@@ -5,7 +5,7 @@ Model extensions:
   - Added the ability to define the total ELF as a sum of individual ELFs with different parameters depending on the type of excitation
   - Added integration limits
   - Added a smoothed cutoff function
-Modifications can be spotted by searching for the keyword 'MODIF'.
+Modifications can be spotted by searching for the keyword 'MODIF' (mainly in calculate.py and epslib.cpp).
 
 An example of how to use this is available: 'Chapidif_tutorial.py'
 It uses the predefined plotting functions: 'plots.py'
@@ -21,5 +21,19 @@ Linux installation:
         cmake -S . -B LinuxLib
         cmake --build LinuxLib
 Done!
+
+Windows installation (to be verified):
+1) Download the tarball
+2) In Anaconda Prompt, install needed libraries:
+        pip install numpy matplotlib PyQt6 nanobind
+3) Compile the C++ library:
+        cmake -S . -B WindowsLib
+        cmake --build WindowsLib --config Release
+Done!
+
+If pip install doesn't work, one can find needed packages here:
+https://pypi.org/project/nanobind/#files
+https://pypi.org/project/PyQt6/#files
+
 
 Don't hestitate to reach: lilian.khelladi@cea.fr
