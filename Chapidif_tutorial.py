@@ -188,10 +188,9 @@ calc.initParArray()
 
 
 # --- 10.4 2D q-omega maps ---
-# plot_dispersion loops calc.q over [q_min, q_max) in steps of q_step and
-# recomputes oneovereps1eps2() at each step.
+# Plot the ELF dispersion with energy and momentum.
 
-#plot_dispersion(calc, q_min=0.0, q_max=2.0, q_step=0.05)
+#plot_dispersion(calc, q_max=5.0, q_step=0.03)
 
 
 # --- 10.5 Custom labels/colors and overlaying multiple curves on one axis ---
