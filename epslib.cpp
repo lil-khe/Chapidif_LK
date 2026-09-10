@@ -22,7 +22,7 @@
 #if __linux__
     #include <quadmath.h>
     #define QUADMATH =1
-#endif  // so no quadmath for MAC
+#endif  // so no quadmath for MAC and Windows
 
 
 
