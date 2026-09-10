@@ -221,10 +221,7 @@ def plot_dispersion(calc, q_max=None, q_step=None, loga=False, max_eq=0.0, ax=No
     calc.LogXY = loga
     calc.max_eq = max_eq
     calc.bulk_eq = True  # bulk (not surface) energy-loss function, matches run_and_plot.eq_plot()
- 
-    # Changing UpperqLimit/Stepsize_qplot changes Nqstep/CenterFirstBin/etc,
-    # which only get recomputed on initParArray() -- required any time a
-    # setting changes after the initial setup (see tutorial section 9).
+
     calc.initParArray()
  
     calc.colorplot_lossfunction()
