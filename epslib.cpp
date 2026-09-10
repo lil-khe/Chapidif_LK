@@ -15,14 +15,13 @@
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/complex.h> // Enables complex number support
 
-//#ifdef _WIN32
-//    #include <quadmath.h>
-//    #define QUADMATH =1
-//#elif __linux__
-#if __linux__
+#ifdef _WIN32
     #include <quadmath.h>
     #define QUADMATH =1
-#endif  // so no quadmath for MAC and Windows
+#elif __linux__
+    #include <quadmath.h>
+    #define QUADMATH =1
+#endif  // so no quadmath for MAC
 
 
 
@@ -2180,7 +2179,9 @@ double DIIMFP_at_omega(double omega)
     if ((Qrecoil_max > 2*omega)and !modelVlasov) //calculate the momentum of an electron with energy omega, i.e. the maximum transferred momentum, factor 2 beacuse struck electron not stationary
     {  
          double totalE=omega+C*C;
-         q2 =sqrt(pow(totalE,2)-pow(C,4))/C+5.0;// the additional amount 5 is because electrons are not stationary, so better go out a bit further
+//         q2 =sqrt(pow(totalE,2)-pow(C,4))/C+5.0;// the additional amount 5 is because electrons are not stationary, so better go out a bit further
+         double q2_closecollision = sqrt(pow(totalE,2) - pow(C,4))/C + 5.0;	//// MODIF 10/09 LK
+         q2 = fmin(q2_closecollision, p_0 + p_1);   //// MODIF 10/09 LK: never exceed the true kinematic envelope, otherwise momentum range is increased too much for small T
     }
     q2used=q2;
 
@@ -2239,7 +2240,9 @@ double DIIMFP_MELF_at_omega(double omega)
     if ((Qrecoil_max > 2*omega)and !modelVlasov) //calculate the momentum of an electron with energy omega, i.e. the maximum transferred momentum, factor 2 beacuse struck electron not stationary
     {  
          double totalE=omega+C*C;
-         q2 =sqrt(pow(totalE,2)-pow(C,4))/C+5.0;// the additional amount 5 is because electrons are not stationary, so better go out a bit further
+//         q2 =sqrt(pow(totalE,2)-pow(C,4))/C+5.0;// the additional amount 5 is because electrons are not stationary, so better go out a bit further
+         double q2_closecollision = sqrt(pow(totalE,2) - pow(C,4))/C + 5.0;	//// MODIF 10/09 LK
+         q2 = fmin(q2_closecollision, p_0 + p_1);   //// MODIF 10/09 LK: never exceed the true kinematic envelope, otherwise momentum range is increased too much for small T
     }
     q2used=q2;
 
