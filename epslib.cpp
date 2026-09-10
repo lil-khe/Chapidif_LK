@@ -15,10 +15,11 @@
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/complex.h> // Enables complex number support
 
-#ifdef _WIN32
-    #include <quadmath.h>
-    #define QUADMATH =1
-#elif __linux__
+//#ifdef _WIN32
+//    #include <quadmath.h>
+//    #define QUADMATH =1
+//#elif __linux__
+#if __linux__
     #include <quadmath.h>
     #define QUADMATH =1
 #endif  // so no quadmath for MAC
