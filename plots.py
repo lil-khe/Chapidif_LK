@@ -196,44 +196,58 @@ def plot_all_three(calc, x_axis_keV=True, recompute=True, loga=False,  e_min_keV
 
 ###	PLOT FUNCTION	###
 
-def plot_dispersion(calc, q_min, q_max, q_step, ax=None, fig=None, cmap="plasma"):
+def plot_dispersion(calc, q_max=None, q_step=None, loga=False, max_eq=0.0, ax=None, fig=None, cmap="plasma"):
     """
-    2D map of the loss function Im[-1/eps] vs energy loss ω (eV, y-axis)
-    and momentum transfer q (a.u., x-axis), built by looping calc.q over
-    the requested range and recomputing oneovereps1eps2() at each step.
+    2D map of the loss function Im[-1/eps] vs energy loss omega (eV, y-axis)
+    and momentum transfer q (a.u., x-axis), using Chapidif's own
+    colorplot_lossfunction() + scale_image() (the same path run_and_plot's
+    eq_plot() uses internally).
 
-    Note: this is a straightforward but relatively slow way to build the
-    2D map. Chapidif's own colorplot_lossfunction() + scale_image() do the
-    same thing more efficiently and also support a log color scale, so
-    prefer those for fine q-grids.
+ 
+    q_max, q_step : override calc.UpperqLimit / calc.Stepsize_qplot before
+                    plotting (omit to just use whatever calc is currently
+                    set to). The q-axis always starts at 0.5*Stepsize_qplot,
+                    matching Chapidif's own convention: there's no
+                    separate q_min.
+    loga          : log10 color scale (uses calc.LogXY / calc.scale_image's
+                    built-in log handling) instead of linear.
+    max_eq        : clip the color scale at this value (0.0 = auto-scale to
+                    the data max, matching calc.max_eq's default meaning).
     """
+    if q_max is not None:
+        calc.UpperqLimit = q_max
+    if q_step is not None:
+        calc.Stepsize_qplot = q_step
+    calc.LogXY = loga
+    calc.max_eq = max_eq
+    calc.bulk_eq = True  # bulk (not surface) energy-loss function, matches run_and_plot.eq_plot()
+ 
+    # Changing UpperqLimit/Stepsize_qplot changes Nqstep/CenterFirstBin/etc,
+    # which only get recomputed on initParArray() -- required any time a
+    # setting changes after the initial setup (see tutorial section 9).
+    calc.initParArray()
+ 
+    calc.colorplot_lossfunction()
+    calc.scale_image()
+ 
+    fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(6, 6))
-
-    z = []
-    q_list = []
-    n_steps = int(round((q_max - q_min) / q_step))
-    for i in range(n_steps):
-        current_q = q_min + i * q_step
-        calc.q = current_q
-        calc.oneovereps1eps2()
-        z.append(calc.Result2)
-        q_list.append(current_q)
-
-    z = np.array(z)
-
+ 
+    ratio = calc.UpperqLimit / (calc.UpperELimit - calc.CenterFirstBin)
     im = ax.imshow(
-        z.T,                     # transpose so q is horizontal
-        origin='lower',
-        aspect='auto',
-        extent=[q_min, q_max, calc.x_axis[0], calc.x_axis[-1]],
+        calc.my_scaled_image,
+        extent=[0, calc.UpperqLimit, calc.UpperELimit, calc.LowerELimit],
+        aspect=ratio,
         cmap=cmap
     )
-    fig.colorbar(im, ax=ax)
+    plt.colorbar(im, ax=ax, label="log10(loss function)" if loga else "loss function")
 
+    ax.set_xlim(0, calc.UpperqLimit)
+    ax.set_ylim(calc.CenterFirstBin, calc.UpperELimit)
     ax.set_xlabel("q (a.u.)")
     ax.set_ylabel("$\\omega$ (eV)")
-
+ 
     if fig is not None:
         _save_and_show(fig, "momentum_dispersion")
     return fig, ax
@@ -310,9 +324,7 @@ def plot_kk_test(calc, labels=None, colors=None, ax=None):
     of Im[eps], Result4 = KK-transform of Re[eps]). The two pairs should
     overlay closely if the dielectric function is KK-consistent.
 
-    Returns (None, None) and prints a message if calc.eps_kk_test() fails
-    (this mirrors Chapidif's own error-code check, which the previous
-    version of this function was missing).
+    Returns (None, None) and prints a message if calc.eps_kk_test() fails.
 
     labels, colors : optional lists of 4 entries
                       [Re eps, Im eps, KK Im eps, KK Re eps]
@@ -403,11 +415,6 @@ def plot_Z_sum_rules(calc, loga=False, ax=None, labels=None, colors=None):
 def plot_kk_sum_rules(calc, loga=False, ax=None, label=None, color=None):
     """
     Plot the Kramers-Kronig (perfect-screening) sum rule, Result4, vs ω.
-
-    Fixed from the previous version, which plotted Result4 twice under
-    two different labels (once with your custom `label`, once with the
-    default LaTeX label) instead of using your label when supplied and
-    falling back to the default otherwise.
 
     label, color : optional custom legend label / line color
     """
