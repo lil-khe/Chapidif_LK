@@ -155,7 +155,7 @@ calc.initParArray()
 # momentum transfer.
 
 #plot_eps(calc)                     # Re[eps(omega)] and Im[eps(omega)]
-#plot_ELF(calc)                     # energy loss function Im[-1/eps(omega)]
+plot_ELF(calc)                     # energy loss function Im[-1/eps(omega)]
 #plot_kk_test(calc)                 # Kramers-Kronig self-consistency check (Re/Im[eps] vs. their KK reconstruction)
 
 
