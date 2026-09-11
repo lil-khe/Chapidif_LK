@@ -20,7 +20,7 @@ Linux installation:
 4) Compile the C++ library:
         cmake -S . -B LinuxLib
         cmake --build LinuxLib
-Done!
+Done! Run "python Chapidif_tutorial.py" in your terminal
 
 Windows installation:
 1) Download the tarball
@@ -29,7 +29,7 @@ Windows installation:
 3) Compile the C++ library:
         cmake -S . -B WindowsLib
         cmake --build WindowsLib --config Release
-Done!
+Done! Run "python Chapidif_tutorial.py" in Anaconda Prompt
 
 If pip install doesn't work, one can find needed packages here:
 https://pypi.org/project/nanobind/#files
