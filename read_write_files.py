@@ -2,7 +2,7 @@ import re  # for regular expression to extract numbers from string
 
 import os
 
-from PyQt6.QtWidgets import QFileDialog
+#from PyQt6.QtWidgets import QFileDialog   ### MODIF 11/09 LK: I think it is not needed for our use, and it triggers an error in Windows compilation
    
 
 import numpy as np
