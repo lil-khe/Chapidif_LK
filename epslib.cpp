@@ -162,7 +162,7 @@ inline double velocity_from_energy(double E, double mass)  // E in a.u. mass in 
 inline double recoil_energy( double q) // calculates the energy a free electron gets after it absorbes momentum q
 {  //recoil energy after momentum transfer q to a free, stationary electron
     double Q_recoil;
-    if((q < 2.0) or !Dispersion_relativistic) 
+    if((q < 2.0) || !Dispersion_relativistic) 
     {
         Q_recoil = q*q/2.0;
     }
@@ -689,7 +689,7 @@ dcomp Chi_Lindhard_LL(double q, double current_w, int i)
     }
     else //calculate the equivalent Drude-Lindhard
     {  
-        if ( Apply_Mermin_Correction or DirectMethod) chi =  Chi_DL(Ai[i], q, current_w, gammai[i], wi[i], 1.0 ,gapi[i] );
+        if ( Apply_Mermin_Correction || DirectMethod) chi =  Chi_DL(Ai[i], q, current_w, gammai[i], wi[i], 1.0 ,gapi[i] );
         else  chi =  Chi_DL(Ai[i], q, current_w, 2*gammai[i], wi[i], 1.0,gapi[i] );//plain lindhard, has double the nominal  width
     }
     return (chi);
@@ -721,7 +721,7 @@ dcomp Chi_Lindhard_LL(double A, double q, double current_w, double w_p, double g
     }
     else //calculate the equivalent Drude-Lindhard
     {  
-        if ( Apply_Mermin_Correction or DirectMethod) chi =  Chi_DL(A, q, current_w, gamma, w_p, 1.0 ,gap );
+        if ( Apply_Mermin_Correction || DirectMethod) chi =  Chi_DL(A, q, current_w, gamma, w_p, 1.0 ,gap );
         else  chi =  Chi_DL(A, q, current_w, 2*gamma, w_p, 1.0,gap);//plain lindhard, has double the nominal  width
     }
     return (chi);
@@ -760,7 +760,7 @@ dcomp Chi_Kaneko_Mermin(double q, double omega, double gamma, double  alpha, dou
     w_c_u=sqrt(omega_c*omega_c-U*U);
  
     z2 = Chi_Kaneko(q, w_c_u, Q,  gamma_fudge) ;
-    if(!Apply_Mermin_Correction or  DirectMethod) return z2;
+    if(!Apply_Mermin_Correction ||  DirectMethod) return z2;
     
     z1 = dcomp(1.0, g_over_w);// omega should be unequal 0 
     z3 = Chi_Kaneko(q, dcomp(0.0, U+1e-10), Q,  gamma_fudge);
@@ -831,7 +831,7 @@ dcomp  calculate_chi_AA_LL(double q)  // Archubi-Arista suggested use of  Levine
             
              if (q < c_transition*w_global+0.00001)
             {
-                if ( Apply_Mermin_Correction or DirectMethod )  chi = Chi_DL(Ai[i], q, w_global, Width_Kaneko[i], w_pl_l[i], 1.0,U );
+                if ( Apply_Mermin_Correction || DirectMethod )  chi = Chi_DL(Ai[i], q, w_global, Width_Kaneko[i], w_pl_l[i], 1.0,U );
                 else chi = Chi_DL(Ai[i],q, w_global, 2* Width_Kaneko[i], w_pl_l[i], 1.0,U ); //plain RPA , has double the nominal  width
             }
             else if( l_Kaneko[i]==0) chi = Chi_Kaneko_Mermin(q, w_global, Width_Kaneko[i], alpha, U, gamma_fudge);
@@ -1012,7 +1012,7 @@ dcomp Chi_Vlasov_M(double q, double current_w,int i)
     else //calculate the equivalent Drude-Lindhard
     {   
         double omega0 = sqrt(2*pow(Q_Vlasov[i],3)/sqrt(pi));
-        if ( Apply_Mermin_Correction or DirectMethod) chi =  Chi_DL(Ai[i], q, current_w, gammai[i], omega0, 1,gapi[i] );
+        if ( Apply_Mermin_Correction || DirectMethod) chi =  Chi_DL(Ai[i], q, current_w, gammai[i], omega0, 1,gapi[i] );
         else   chi  = Chi_DL(Ai[i], q, current_w, 2*gammai[i], omega0, 1,gapi[i] );//plain lindhard, has double the nominal  width
     }
     
@@ -1066,7 +1066,7 @@ double TaucNormalisation(double A,double  C, double E0, double E0_thisq,  double
     double sum=0.0; 
     double Elower= E0_thisq-0.5*stepsize;
     double Eupper= E0_thisq+0.5*stepsize;
-    if (add_Dopplerwidth_to_classical_DF and !modelTauc_Mermin)
+    if (add_Dopplerwidth_to_classical_DF && !modelTauc_Mermin)
     {
         double k_f=pow( E0* E0*3.0/4.0*pi,1.0/3.0);
        
@@ -1848,8 +1848,8 @@ int  copyP_to_Vars(double *p,  int modelchoice)
             if (!modelForouhiBloomer)  gammai[i] = p[5 * i + 3] / Hartree;
             if (modelForouhiBloomer) gammai[i] = p[5 * i + 3] / (Hartree*Hartree);
         
-            if (modelDrude or modelBrendelBormann) Ai[i] = Ai[i] / (Hartree*Hartree);// Ai is in eV^2 in DL and BB
-            else if  (modelTaucLorentz or modelTL_an or modelTauc_Mermin )  Ai[i] = Ai[i] / (Hartree);// Ai is in eV in TL and TLan
+            if (modelDrude || modelBrendelBormann) Ai[i] = Ai[i] / (Hartree*Hartree);// Ai is in eV^2 in DL and BB
+            else if  (modelTaucLorentz || modelTL_an || modelTauc_Mermin )  Ai[i] = Ai[i] / (Hartree);// Ai is in eV in TL and TLan
             if(!modelBrendelBormann)
             {
                 alphai[i] = p[5 * i + 4];
@@ -1859,7 +1859,7 @@ int  copyP_to_Vars(double *p,  int modelchoice)
                 alphai[i]=1.0;
                 sigmai[i]=p[5 * i + 4]/Hartree;
             }
-            if  (modelTaucLorentz or modelTL_an or modelTauc_Mermin )
+            if  (modelTaucLorentz || modelTL_an || modelTauc_Mermin )
             {
                 TaucGap[i] = p[5* i + 5] / Hartree;  
                 gapi[i]=0.0;  //  gapi in LL model,gapi[]=0 gives Mermin
@@ -2176,7 +2176,7 @@ double DIIMFP_at_omega(double omega)
     Qrecoil_max= recoil_energy(q2);
    
 
-    if ((Qrecoil_max > 2*omega)and !modelVlasov) //calculate the momentum of an electron with energy omega, i.e. the maximum transferred momentum, factor 2 beacuse struck electron not stationary
+    if ((Qrecoil_max > 2*omega) &&  !modelVlasov) //calculate the momentum of an electron with energy omega, i.e. the maximum transferred momentum, factor 2 beacuse struck electron not stationary
     {  
          double totalE=omega+C*C;
 //         q2 =sqrt(pow(totalE,2)-pow(C,4))/C+5.0;// the additional amount 5 is because electrons are not stationary, so better go out a bit further
@@ -2237,7 +2237,7 @@ double DIIMFP_MELF_at_omega(double omega)
     Qrecoil_max= recoil_energy(q2);
    
 
-    if ((Qrecoil_max > 2*omega)and !modelVlasov) //calculate the momentum of an electron with energy omega, i.e. the maximum transferred momentum, factor 2 beacuse struck electron not stationary
+    if ((Qrecoil_max > 2*omega) &&  !modelVlasov) //calculate the momentum of an electron with energy omega, i.e. the maximum transferred momentum, factor 2 beacuse struck electron not stationary
     {  
          double totalE=omega+C*C;
 //         q2 =sqrt(pow(totalE,2)-pow(C,4))/C+5.0;// the additional amount 5 is because electrons are not stationary, so better go out a bit further
@@ -2513,7 +2513,7 @@ double DDCS_incl_retardation(double omega, double theta)
     {   double *SurfLoss=np_SurfLoss.data();
         copyP_to_Vars(ParameterArray.data(), modelchoice);  ;  
      
-        // we evaluate dielectric function, there decided to add either Chi or elf.
+        // we evaluate dielectric function, there decided to add either Chi || elf.
         for (int i = 0; i < NStep; i++)
         {
             double omega = FirstEnergy + StepSize*i;
@@ -2798,7 +2798,7 @@ double DDCS_incl_retardation(double omega, double theta)
             }        
         }
         if (errno !=0) my_perror("an error occured");
-        if (modelTaucLorentz or modelTL_an or modelTauc_Mermin)
+        if (modelTaucLorentz || modelTL_an || modelTauc_Mermin)
         {   
             for (int i = 0; i < MAXOSC; i++)
             {
