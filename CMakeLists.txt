@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15...3.27)
-project(chapidif_nanobind) # Replace 'my_project' with the name of your project
+project(chapidif_nanobind)
 if(MINGW)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .dll ${CMAKE_FIND_LIBRARY_SUFFIXES})
     message(STATUS "Building with mingw-w64")
@@ -19,17 +19,22 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
-# Detect the installed nanobind package and import it into CMake
+
 execute_process(
   COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
   OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
 
 find_package(nanobind CONFIG REQUIRED)
-#add_library(epslib STATIC epslib.cpp Faddeeva.cc )
-nanobind_add_module(epslib epslib.cpp Faddeeva.cc )
+nanobind_add_module(epslib epslib.cpp Faddeeva.cc)
 if(MINGW)
-    target_link_options(epslib PRIVATE -static) 
-    target_link_libraries(epslib PRIVATE m quadmath )
-else()
-    target_link_libraries(epslib PRIVATE m quadmath )
+    target_link_options(epslib PRIVATE -static)
+    target_link_libraries(epslib PRIVATE m quadmath)
+elseif(UNIX)
+    target_link_libraries(epslib PRIVATE m)
+endif()
+target_compile_options(epslib PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/permissive->)
+if(WIN32)
+    add_custom_command(TARGET epslib POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:epslib>
+        "${CMAKE_SOURCE_DIR}/WindowsLib/")
 endif()
