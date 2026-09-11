@@ -22,7 +22,7 @@ Linux installation:
         cmake --build LinuxLib
 Done!
 
-Windows installation (to be verified):
+Windows installation:
 1) Download the tarball
 2) In Anaconda Prompt, install needed libraries:
         pip install numpy matplotlib PyQt6 nanobind
