@@ -25,7 +25,7 @@ Done!
 Windows installation:
 1) Download the tarball
 2) In Anaconda Prompt, install needed libraries:
-        pip install numpy matplotlib PyQt6 nanobind
+        pip install numpy matplotlib PyQt6 nanobind    ### If PyQt6 is not installed it still works
 3) Compile the C++ library:
         cmake -S . -B WindowsLib
         cmake --build WindowsLib --config Release
